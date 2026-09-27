@@ -1,0 +1,98 @@
+{
+  "id": "s4",
+  "name": "نفوذ به محدودهٔ ممنوعه",
+  "category": "حفاظت محیطی",
+  "difficulty": "آسان",
+  "nominal_minutes": 8,
+  "description": "تشخیص ویدئویی و ACK در مهلت.",
+  "metrics": {
+    "detection_time": "۲۲ ثانیه",
+    "ack_time": "۱۸ ثانیه",
+    "protocol_compliance": "۹۸٪",
+    "route_decision": "اعزام تیم براوو"
+  },
+  "steps": [
+    {
+      "time_offset_ms": 5400,
+      "events": [
+        {
+          "message": "CAM-03: حرکت در حاشیهٔ منطقه",
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 13500,
+      "events": [
+        {
+          "message": "ورود فرد به محدودهٔ ممنوعه · YOLOv8 ۹۲٪",
+          "level": "critical"
+        }
+      ],
+      "incidents": [
+        {
+          "type": "intrusion",
+          "severity": "high",
+          "lat": 35.69459,
+          "lon": 51.393424,
+          "radius_m": 150,
+          "confidence": 0.92,
+          "evidence": [
+            "cam-03",
+            "yolov8"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "type": "intrusion",
+          "severity": "critical",
+          "message": "حرکت غیرمجاز در منطقهٔ ممنوعه"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 22500,
+      "events": [
+        {
+          "message": "ACK اپراتور در ۱۸ ثانیه",
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 31500,
+      "events": [
+        {
+          "message": "تیم براوو در محل",
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "bravo",
+          "lat": 35.693692,
+          "lon": 51.392318,
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 3
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": "پایان سناریو",
+          "level": "info"
+        }
+      ]
+    }
+  ],
+  "duration_ms": 45000,
+  "loop": false,
+  "center": {
+    "lat": 35.6892,
+    "lon": 51.389
+  }
+}

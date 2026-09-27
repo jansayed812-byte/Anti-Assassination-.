@@ -109,6 +109,22 @@ services:
       - ops-network
     restart: unless-stopped
 
+  # Operations console (dashboard + API/WebSocket backend). Set JWT_SECRET in .env.
+  console:
+    build: .
+    container_name: ops-console
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 8000
+      JWT_SECRET: ${JWT_SECRET:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
+      DEMO_MODE: ${DEMO_MODE:-true}
+    ports:
+      - "8000:8000"
+    networks:
+      - ops-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   timescaledb_data:

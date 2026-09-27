@@ -1,5 +1,5 @@
 # Makefile - سامانه ارزیابی امنیتی
-.PHONY: help setup up down logs test clean health
+.PHONY: help setup up down logs test clean health install app-build app-start app-dev console
 
 help:
 	@echo "سامانه ارزیابی امنیتی محیط‌های عملیاتی"
@@ -14,6 +14,11 @@ help:
 	@echo "  make db-shell     - ورود به PostgreSQL"
 	@echo "  make nats-shell   - ورود به NATS"
 	@echo "  make test         - اجرای تست‌ها"
+	@echo "  make install      - نصب وابستگی‌های root، services و dashboard"
+	@echo "  make app-build    - بیلد داشبورد و typecheck سرویس‌ها"
+	@echo "  make app-start    - اجرای کنسول عملیات (UI + API) روی :8000"
+	@echo "  make app-dev      - اجرای توسعه (API :8000 + Vite :3000)"
+	@echo "  make console      - اجرای کنسول در Docker (نیازمند JWT_SECRET)"
 
 setup:
 	@if [ ! -f .env ]; then \
@@ -94,3 +99,19 @@ prod:
 	docker-compose -f docker-compose.yml up -d
 
 .DEFAULT_GOAL := help
+
+install:
+	npm run setup
+
+app-build:
+	npm run build
+
+app-start: app-build
+	npm start
+
+app-dev:
+	npm run dev
+
+console:
+	docker-compose up -d --build console
+	@echo "✓ کنسول عملیات: http://localhost:8000"

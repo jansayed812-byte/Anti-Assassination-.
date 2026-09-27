@@ -30,6 +30,10 @@ export class FusionOrchestrator {
   private residualAnalyzer: ResidualAnalyzer;
   private lastFusionTime = 0;
   private sourceHistory = new Map<string, any>();
+  private initialized = false;
+  private consecutiveRejects = 0;
+  private static readonly REACQUIRE_AFTER = 5;
+  private static readonly UNCONSTRAINED_VAR = 1e8;
 
   constructor(config: FusionConfig) {
     this.config = { updateRateHz: 10, outlierThreshold: 5.0, confidenceThreshold: 0.3, enableOutlierDetection: true, ...config };
@@ -40,6 +44,9 @@ export class FusionOrchestrator {
   async processMeasurements(measurements: Array<{sourceId: string; sourceType: string; data: any; timestamp: number}>): Promise<FusionResult> {
     const valid = measurements.filter(m => validateSensorData(m.data, m.sourceType));
     if (valid.length === 0) throw new Error('No valid measurements to fuse');
+    // Outlier gating needs a track to gate against: seed it from the most confident fix, and
+    // re-acquire after sustained total rejection so the filter cannot stay locked on a stale state.
+    if (!this.initialized || this.consecutiveRejects >= FusionOrchestrator.REACQUIRE_AFTER) this.initializeTrack(valid);
     const dt = (Date.now() - this.lastFusionTime) / 1000;
     this.kalmanFilter.predict(dt);
     this.lastFusionTime = Date.now();
@@ -48,7 +55,7 @@ export class FusionOrchestrator {
     const fusedSources: string[] = [];
     let totalConfidence = 0;
     for (const m of valid) {
-      const { enuMeasurement, covariance, confidence } = this.convertToENU(m.sourceType, m.data);
+      const { enuMeasurement, covariance, confidence } = this.convertToENU(m.sourceType, m.data, predicted.z);
       if (this.config.enableOutlierDetection && OutlierDetector.isOutlier(enuMeasurement, predicted, covariance, this.config.outlierThreshold)) continue;
       this.kalmanFilter.update(enuMeasurement, covariance, confidence);
       const residual = OutlierDetector.residualDistance(enuMeasurement, predicted);
@@ -57,6 +64,7 @@ export class FusionOrchestrator {
       totalConfidence += confidence;
       this.sourceHistory.set(m.sourceId, { timestamp: m.timestamp, data: m.data, confidence, residual });
     }
+    this.consecutiveRejects = fusedSources.length === 0 ? this.consecutiveRejects + 1 : 0;
     const s = this.kalmanFilter.getState();
     const geodetic = CoordinateConverter.ENUToGeodetic({ east_m: s.position.x, north_m: s.position.y, up_m: s.position.z }, this.config.enuReference);
     const uncertainty = this.kalmanFilter.getPositionUncertainty();
@@ -71,12 +79,31 @@ export class FusionOrchestrator {
     };
   }
 
-  private convertToENU(sourceType: string, data: any): { enuMeasurement: Vector3; covariance: Matrix3; confidence: number } {
+  private initializeTrack(valid: Array<{ sourceType: string; data: any }>): void {
+    const seed = valid.map(m => this.convertToENU(m.sourceType, m.data)).sort((a, b) => b.confidence - a.confidence)[0];
+    this.kalmanFilter = new KalmanFilter(seed.enuMeasurement, new Vector3(), 1.0 / this.config.updateRateHz);
+    this.residualAnalyzer = new ResidualAnalyzer();
+    this.initialized = true;
+    this.consecutiveRejects = 0;
+  }
+
+  /**
+   * Wi-Fi/BLE/cellular fixes are horizontal-only: they are placed at the track's current height
+   * (`currentUp`, metres above the ENU reference) with an effectively unbounded vertical variance,
+   * so they constrain east/north without dragging the altitude — or failing the outlier gate on it.
+   */
+  private convertToENU(sourceType: string, data: any, currentUp = 0): { enuMeasurement: Vector3; covariance: Matrix3; confidence: number } {
+    const horizontal = (lat: number, lon: number, hAcc: number, q: number) => {
+      const enu = CoordinateConverter.geodeticToENU(lat, lon, this.config.enuReference.reference_altitude_m + currentUp, this.config.enuReference);
+      const cov = generateCovariance(hAcc, hAcc, q).position;
+      cov[2][2] = FusionOrchestrator.UNCONSTRAINED_VAR;
+      return { enuMeasurement: new Vector3(enu.east_m, enu.north_m, currentUp), covariance: new Matrix3(cov), confidence: q };
+    };
     switch (sourceType) {
       case 'gnss': { const g = data as GNSSData; const q = SensorQualityAssessor.assessFixQuality(g.fix_type, g.satellites_used, g.hdop); const enu = CoordinateConverter.geodeticToENU(g.latitude, g.longitude, g.altitude_m, this.config.enuReference); return { enuMeasurement: new Vector3(enu.east_m, enu.north_m, enu.up_m), covariance: new Matrix3(generateCovariance(g.h_accuracy_m, g.v_accuracy_m, q).position), confidence: q }; }
-      case 'wifi': { const w = data as WiFiRTTData; const q = SensorQualityAssessor.assessSignalQuality(w.rssi_dbm); const enu = CoordinateConverter.geodeticToENU(w.latitude, w.longitude, 0, this.config.enuReference); return { enuMeasurement: new Vector3(enu.east_m, enu.north_m, enu.up_m), covariance: new Matrix3(generateCovariance(w.accuracy_m, w.accuracy_m*2, q).position), confidence: q }; }
-      case 'ble': { const b = data as BLEBeaconData; const q = SensorQualityAssessor.assessSignalQuality(b.rssi_dbm)*0.7; const enu = CoordinateConverter.geodeticToENU(b.latitude, b.longitude, 0, this.config.enuReference); return { enuMeasurement: new Vector3(enu.east_m, enu.north_m, enu.up_m), covariance: new Matrix3(generateCovariance(b.accuracy_m, b.accuracy_m, q).position), confidence: q }; }
-      case 'cellular': { const c = data as CellularData; const enu = CoordinateConverter.geodeticToENU(c.latitude, c.longitude, 0, this.config.enuReference); return { enuMeasurement: new Vector3(enu.east_m, enu.north_m, enu.up_m), covariance: new Matrix3(generateCovariance(c.accuracy_m, c.accuracy_m, 0.5).position), confidence: 0.5 }; }
+      case 'wifi': { const w = data as WiFiRTTData; return horizontal(w.latitude, w.longitude, w.accuracy_m, SensorQualityAssessor.assessSignalQuality(w.rssi_dbm)); }
+      case 'ble': { const b = data as BLEBeaconData; return horizontal(b.latitude, b.longitude, b.accuracy_m, SensorQualityAssessor.assessSignalQuality(b.rssi_dbm) * 0.7); }
+      case 'cellular': { const c = data as CellularData; return horizontal(c.latitude, c.longitude, c.accuracy_m, 0.5); }
       default: throw new Error(`Unknown source type: ${sourceType}`);
     }
   }

@@ -45,19 +45,29 @@ export class RiskEngine {
       for (let j = 0; j < cellsPerSide; j++) {
         const cellLat = center.lat - (gridSizeKm/111)/2 + i*stepLat;
         const cellLon = center.lon - (gridSizeKm/(111*Math.cos(center.lat*Math.PI/180)))/2 + j*stepLon;
-        const near = incidents.filter(inc => inc.location && RiskEngine.distanceM(cellLat, cellLon, inc.location.lat, inc.location.lon) <= inc.radius_m + (gridSizeKm*1000/cellsPerSide/2));
-        let severity=0, likelihood=0, exposure=0, confidence=0;
-        if (near.length > 0) {
-          const lv = (l: RiskLevel) => ({low:0.2,medium:0.5,high:0.75,critical:1.0}[l]);
-          severity = near.reduce((s,i)=>s+lv(i.severity),0)/near.length;
-          likelihood = Math.min(1, near.length*0.25);
-          exposure = Math.min(1, near.length*0.3);
-          confidence = near.reduce((s,i)=>s+i.confidence,0)/near.length;
-        }
-        results.push({ lat: cellLat, lon: cellLon, risk: RiskEngine.calculate({ severity, likelihood, exposure, data_confidence: confidence||0.1, source: 'grid' }) });
+        results.push({ lat: cellLat, lon: cellLon, risk: RiskEngine.assessPoint(incidents, cellLat, cellLon, gridSizeKm*1000/cellsPerSide/2) });
       }
     }
     return results;
+  }
+
+  /**
+   * Risk at a point from the incidents whose radius (plus `marginM`) covers it:
+   * severity = most severe covering incident, likelihood grows with corroborating incidents,
+   * exposure falls off linearly with distance to the nearest incident, confidence = mean confidence.
+   */
+  static assessPoint(incidents: IncidentEvent[], lat: number, lon: number, marginM = 0, source = 'grid'): RiskResult {
+    const near = incidents
+      .filter(inc => inc.location)
+      .map(inc => ({ inc, d: RiskEngine.distanceM(lat, lon, inc.location!.lat, inc.location!.lon), r: inc.radius_m + marginM }))
+      .filter(x => x.d <= x.r);
+    if (near.length === 0) return RiskEngine.calculate({ severity: 0, likelihood: 0, exposure: 0, data_confidence: 0.1, location: { lat, lon }, source });
+    const lv: Record<RiskLevel, number> = { low: 0.2, medium: 0.5, high: 0.75, critical: 1.0 };
+    const severity = Math.max(...near.map(x => lv[x.inc.severity]));
+    const likelihood = Math.min(1, 0.4 + 0.2 * (near.length - 1));
+    const exposure = Math.max(...near.map(x => Math.max(0.2, 1 - x.d / x.r)));
+    const data_confidence = near.reduce((s, x) => s + x.inc.confidence, 0) / near.length;
+    return RiskEngine.calculate({ severity, likelihood, exposure, data_confidence, location: { lat, lon }, evidence: near.map(x => x.inc.incident_id), source });
   }
 
   static distanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {

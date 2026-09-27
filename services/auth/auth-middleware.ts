@@ -4,21 +4,25 @@
 import { Request, Response, NextFunction } from 'express';
 import { createHash, createHmac } from 'crypto';
 
-export type Role = 'viewer' | 'operator' | 'commander' | 'admin';
+export type Role = 'viewer' | 'operator' | 'analyst' | 'planner' | 'commander' | 'technical' | 'admin';
 
 export interface JWTClaims { sub: string; name: string; role: Role; exp: number; iat: number; }
 export interface AuditEntry { user_id: string; action: string; resource: string; ip: string; at: string; result: 'allow' | 'deny'; chain_hash: string; }
 
+const READ = ['read:positions', 'read:incidents', 'read:alerts', 'read:plans', 'read:scenarios', 'read:devices', 'read:admin'];
 const PERMISSIONS: Record<Role, Set<string>> = {
-  viewer:    new Set(['read:positions', 'read:incidents', 'read:alerts']),
-  operator:  new Set(['read:positions', 'read:incidents', 'read:alerts', 'write:incidents', 'ack:alerts']),
-  commander: new Set(['read:positions', 'read:incidents', 'read:alerts', 'write:incidents', 'ack:alerts', 'validate:incidents', 'write:plans']),
+  viewer:    new Set(READ),
+  operator:  new Set([...READ, 'write:incidents', 'ack:alerts', 'write:alerts', 'command:devices', 'run:scenarios', 'switch:route']),
+  analyst:   new Set([...READ, 'write:incidents', 'ack:alerts', 'validate:incidents', 'run:analysis', 'run:scenarios']),
+  planner:   new Set([...READ, 'write:plans', 'ack:alerts', 'run:analysis', 'run:scenarios', 'switch:route']),
+  commander: new Set([...READ, 'write:incidents', 'ack:alerts', 'write:alerts', 'validate:incidents', 'write:plans', 'approve:plans', 'run:analysis', 'run:scenarios', 'command:devices', 'switch:route']),
+  technical: new Set([...READ, 'ack:alerts', 'write:devices', 'command:devices', 'run:maintenance', 'manage:keys']),
   admin:     new Set(['*']),
 };
 
-function hasPermission(role: Role, permission: string): boolean { const p = PERMISSIONS[role]; return p.has('*') || p.has(permission); }
+export function hasPermission(role: Role, permission: string): boolean { const p = PERMISSIONS[role]; return !!p && (p.has('*') || p.has(permission)); }
 
-function verifyJWT(token: string, secret: string): JWTClaims | null {
+export function verifyJWT(token: string, secret: string): JWTClaims | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;

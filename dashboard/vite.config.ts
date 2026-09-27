@@ -10,4 +10,14 @@ export default defineConfig({
       '/socket.io': { target: 'http://localhost:8000', ws: true },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          react: ['react', 'react-dom', 'react-router-dom', 'zustand'],
+        },
+      },
+    },
+  },
 });

@@ -1,0 +1,88 @@
+{
+  "id": "s6",
+  "name": "تهدید پهپادی",
+  "category": "هوایی",
+  "difficulty": "سخت",
+  "nominal_minutes": 10,
+  "description": "رهگیری پهپاد ناشناس و واکنش تیم.",
+  "metrics": {
+    "detection_time": "۲۸ ثانیه",
+    "ack_time": "۲۰ ثانیه",
+    "protocol_compliance": "۹۰٪",
+    "route_decision": "توقف و پوشش"
+  },
+  "steps": [
+    {
+      "time_offset_ms": 4500,
+      "events": [
+        {
+          "message": "ردیابی رادیویی پهپاد ناشناس",
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 12600,
+      "events": [
+        {
+          "message": "پهپاد ناشناس در ۳۰۰ متری کاروان",
+          "level": "critical"
+        }
+      ],
+      "incidents": [
+        {
+          "type": "hostile_drone",
+          "severity": "critical",
+          "lat": 35.6892,
+          "lon": 51.391212,
+          "radius_m": 300,
+          "confidence": 0.85,
+          "evidence": [
+            "rf_scan",
+            "drone_video"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "type": "hostile_uav",
+          "severity": "critical",
+          "message": "پهپاد ناشناس نزدیک کاروان"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 22500,
+      "events": [
+        {
+          "message": "اختلال‌گر فعال شد",
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 32400,
+      "events": [
+        {
+          "message": "پهپاد از منطقه خارج شد",
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": "پایان سناریو",
+          "level": "info"
+        }
+      ]
+    }
+  ],
+  "duration_ms": 45000,
+  "loop": false,
+  "center": {
+    "lat": 35.6892,
+    "lon": 51.389
+  }
+}

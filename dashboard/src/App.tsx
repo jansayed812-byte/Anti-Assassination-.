@@ -1,24 +1,46 @@
-import React from 'react';
-import { StatusBar } from './components/StatusBar';
-import { AlertPanel } from './components/AlertPanel';
-import { Map2D } from './components/Map2D';
-import { Map3D } from './components/Map3D';
-import { useAppStore } from './stores/appStore';
-import { useWebSocket } from './hooks/useWebSocket';
-import { OfflineBanner } from './components/OfflineBanner';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useSession } from './stores/session';
+import { useOps, MODES } from './stores/ops';
+import { ROLE_HOME } from './app/roles';
+import { bootstrap } from './app/actions';
+import { disconnectStream } from './realtime/streams';
+import { Shell } from './app/Shell';
+import { Login } from './pages/Login';
+import { useMode } from './app/hooks';
+
+function Authed() {
+  const token = useSession((s) => s.session?.access_token);
+  const loaded = useOps((s) => s.loaded);
+  useEffect(() => {
+    if (!token) return;
+    if (!useOps.getState().loaded) void bootstrap(token);
+    return () => { if (!useSession.getState().session) disconnectStream(); };
+  }, [token]);
+  if (!token) return <Navigate to="/login" replace />;
+  if (!loaded) return <div style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', background: 'var(--color-bg)', color: 'var(--color-neutral-400)' }}><i className="ph ph-spinner spin" style={{ fontSize: 22 }} /></div>;
+  return <Shell />;
+}
+
+function Home() {
+  const role = useSession((s) => s.role);
+  return <Navigate to={`/${role ? ROLE_HOME[role] : 'live'}`} replace />;
+}
+
+function ModeGuard() {
+  const mode = useMode();
+  const valid = MODES.some((m) => m.id === mode);
+  return valid ? <Authed /> : <Navigate to="/" replace />;
+}
 
 export default function App() {
-  useWebSocket();
-  const mapMode = useAppStore((s) => s.mapMode);
-
+  const token = useSession((s) => s.session?.access_token);
   return (
-    <>
-      <StatusBar />
-      <div style={{ position: 'relative', flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {mapMode === '2d' ? <Map2D /> : <Map3D />}
-        <AlertPanel />
-        <OfflineBanner />
-      </div>
-    </>
+    <Routes>
+      <Route path="/login" element={token ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/" element={token ? <Home /> : <Navigate to="/login" replace />} />
+      <Route path="/:mode" element={<ModeGuard />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

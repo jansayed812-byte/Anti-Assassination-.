@@ -1,0 +1,51 @@
+/* Operations console globals on top of the Nocturne tokens. */
+html, body, #root { height: 100%; }
+body { margin: 0; background: #0b0c13; overflow: hidden; font-family: Inter, Vazirmatn, system-ui, sans-serif; }
+a { color: var(--color-accent); }
+a:hover { color: var(--color-accent-200); }
+input, select, button, textarea { font: inherit; }
+button { border: none; background: transparent; color: inherit; cursor: pointer; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #2c3044; border-radius: 4px; }
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ltr { direction: ltr; }
+.muted { color: var(--color-neutral-400); }
+.caption { font-size: 11px; color: var(--color-neutral-500); }
+.eyebrow { font-size: 10.5px; letter-spacing: 0.06em; color: var(--color-neutral-500); }
+.api-hint { font-family: ui-monospace, monospace; font-size: 10px; color: var(--color-neutral-500); direction: ltr; text-align: end; }
+
+.hov-surface:hover { background: var(--color-surface) !important; }
+.hov-bg:hover { background: var(--color-bg) !important; }
+.hov-accent:hover { background: var(--color-accent-900) !important; }
+.hov-text:hover { color: var(--color-text) !important; }
+.hov-panic:hover { background: oklch(0.3 0.07 25) !important; }
+
+.btn-primary-fill { border: none; cursor: pointer; padding: 9px; border-radius: 8px; background: var(--color-accent); color: #11131e; font-weight: 500; display: flex; gap: 6px; justify-content: center; align-items: center; }
+.btn-primary-fill:hover { background: var(--color-accent-400); }
+.btn-outline { cursor: pointer; background: transparent; padding: 5px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--color-divider); color: var(--color-text); }
+.btn-outline:hover { background: var(--color-bg); }
+.btn-accent-outline { cursor: pointer; background: transparent; padding: 5px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--color-accent); color: var(--color-accent-200); display: inline-flex; gap: 4px; align-items: center; }
+.btn-accent-outline:hover { background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
+
+.field-input { font-size: 12px; padding: 8px 10px; border-radius: 8px; border: none; background: var(--color-bg); color: var(--color-text); outline: none; box-shadow: inset 0 0 0 1px var(--color-divider); }
+.field-input:focus { box-shadow: inset 0 0 0 1px var(--color-accent); }
+.field-label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--color-neutral-400); }
+
+.tile { background: var(--color-bg); border-radius: 8px; padding: 8px 10px; }
+.bar { height: 6px; border-radius: 3px; background: var(--color-neutral-800); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--color-accent); transition: width 0.3s; }
+
+.admin-table { width: 100%; min-width: 560px; border-collapse: collapse; }
+.admin-table th { padding: 10px; font-weight: 500; text-align: start; font-size: 11px; color: var(--color-neutral-500); }
+.admin-table th:first-child, .admin-table td:first-child { padding-inline-start: 14px; }
+.admin-table td { padding: 9px 10px; }
+.admin-table tbody tr { box-shadow: inset 0 1px 0 var(--color-neutral-900); }
+
+.divider-bottom { background: linear-gradient(to left, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat bottom / 100% 1px; }
+.divider-top { background: linear-gradient(to left, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin 1s linear infinite; }

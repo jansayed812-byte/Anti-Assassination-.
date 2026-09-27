@@ -85,4 +85,53 @@ describe('SimulationEngine', () => {
     engine.stop();
     expect(engine.isRunning()).toBe(false);
   });
+
+  it('pause freezes virtual time and resume continues where it left off', () => {
+    engine.load(SAMPLE_SCENARIO);
+    const events: any[] = [];
+    engine.on('event', (e) => events.push(e));
+    engine.start();
+    vi.advanceTimersByTime(150);
+    engine.pause();
+    expect(engine.isRunning()).toBe(false);
+    const frozen = engine.progress();
+    expect(frozen).toBeCloseTo(30, 0);
+    vi.advanceTimersByTime(1000);
+    expect(events.some((e) => e.type === 'alert')).toBe(false);
+    expect(engine.progress()).toBe(frozen);
+    engine.resume();
+    vi.advanceTimersByTime(60);
+    expect(events.some((e) => e.type === 'alert')).toBe(true);
+    vi.advanceTimersByTime(300);
+    expect(engine.isFinished()).toBe(true);
+    expect(engine.progress()).toBe(100);
+  });
+
+  it('runs faster at higher speed', () => {
+    engine.load(SAMPLE_SCENARIO);
+    let done = false;
+    engine.on('event', (e: any) => { if (e.type === 'scenario_complete') done = true; });
+    engine.start(4);
+    vi.advanceTimersByTime(130);
+    expect(done).toBe(true);
+  });
+
+  it('changes speed mid-run without losing elapsed time', () => {
+    engine.load(SAMPLE_SCENARIO);
+    engine.start(1);
+    vi.advanceTimersByTime(100);
+    engine.setSpeed(2);
+    expect(engine.progress()).toBeCloseTo(20, 0);
+    vi.advanceTimersByTime(100);
+    expect(engine.progress()).toBeCloseTo(60, 0);
+  });
+
+  it('emits timeline events from scenario steps', () => {
+    engine.load({ ...SAMPLE_SCENARIO, steps: [{ time_offset_ms: 50, events: [{ message: 'hello', level: 'warning' }] }] });
+    const events: any[] = [];
+    engine.on('event', (e) => events.push(e));
+    engine.start();
+    vi.advanceTimersByTime(60);
+    expect(events.find((e) => e.type === 'timeline')?.data).toEqual({ message: 'hello', level: 'warning', t_ms: 50 });
+  });
 });

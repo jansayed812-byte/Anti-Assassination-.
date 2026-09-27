@@ -16,18 +16,29 @@ export interface ScenarioAlert {
   type: string; severity: 'low' | 'medium' | 'high' | 'critical'; message: string;
 }
 
+export interface ScenarioTimelineEvent {
+  message: string; level: 'critical' | 'error' | 'warning' | 'info';
+}
+
 export interface ScenarioStep {
   time_offset_ms: number;
   positions?: ScenarioPosition[];
   incidents?: ScenarioIncident[];
   alerts?: ScenarioAlert[];
+  events?: ScenarioTimelineEvent[];
+}
+
+export interface ScenarioMetrics {
+  detection_time: string; ack_time: string; protocol_compliance: string; route_decision: string;
 }
 
 export interface ScenarioConfig {
   id: string; name: string; description?: string;
+  category?: string; difficulty?: string; nominal_minutes?: number;
   duration_ms: number; loop?: boolean;
   center: { lat: number; lon: number };
   steps: ScenarioStep[];
+  metrics?: ScenarioMetrics;
 }
 
 export interface ScenarioReport {

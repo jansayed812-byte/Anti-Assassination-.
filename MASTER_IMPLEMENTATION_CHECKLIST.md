@@ -107,6 +107,32 @@
 - ✅ `vitest.config.ts` — root-level test runner
 - ✅ `.github/workflows/ci.yml` — unit tests + dashboard build + typecheck + docker-compose validate
 
+### یکپارچه‌سازی رابط کاربری «کنسول عملیات» ✓
+منبع: فایل طراحی (Operations Console + Handoff Guide، سیستم طراحی Nocturne).
+
+**فرانت‌اند (`dashboard/`)**
+- ✅ پوستهٔ کامل: نوار بالا، فهرست، نقشه، پنل جزئیات، دیوار ویدئو (4K)، خط زمان، تب‌بار موبایل؛ breakpointهای mobile/tablet/desktop/wall
+- ✅ روتینگ با `react-router-dom`: `/login`، `/:mode` برای ۶ فضای کاری، خانهٔ تطبیقی بر اساس نقش JWT
+- ✅ مدیریت وضعیت با Zustand (`stores/ops`، `stores/session`)؛ i18n فارسی/انگلیسی با `dir`/`lang`
+- ✅ ارتباط با سرور: REST با JWT + Socket.IO با envelope (seq + sha256)، resume/replay، حذف تکرار، صف آفلاین ۱۰k
+- ✅ نقشهٔ سه‌بعدی three.js داده‌محور (ترِین آفلاین، شبکهٔ ریسک ۱۲۷ سلولی، PACE، CEP، تهدیدها، منابع)
+- ✅ فونت‌ها و آیکن‌ها محلی (Inter، Vazirmatn، Phosphor) — بدون CDN؛ حذف Leaflet/Cesium
+- ✅ کنترل‌ها بر اساس مجوز نقش (آینهٔ RBAC سرور با تست هم‌خوانی)
+
+**بک‌اند (`services/server/`)**
+- ✅ API یکپارچه: auth، telemetry، risk، monitoring/alerts، PANIC، analyze، threat، escort-plan، scenarios/reports، devices/commands، operations/governance/security/training
+- ✅ چرخهٔ هشدار سمت سرور: active → acknowledged → resolved، ارتقای خودکار با مهلت ۶۰s/۳m/۱۰m/۳۰m
+- ✅ تله‌متری ۵Hz از `FusionOrchestrator` (CEP95 واقعی و سهم منابع)، شبکهٔ ریسک ۱Hz از `RiskEngine.assessPoint`
+- ✅ شش سناریوی جدید با موتور شبیه‌سازی دارای pause/resume/سرعت و گزارش AAR
+- ✅ اسکن امنیتی = اعتبارسنجی زنجیرهٔ hash لاگ حسابرسی
+
+**رفع اشکال در ماژول‌های موجود**
+- ✅ Fusion: track در مبدأ ENU قفل می‌شد و همهٔ اندازه‌گیری‌ها outlier رد می‌شدند → مقداردهی اولیه از اولین fix و بازیابی پس از ۵ رد متوالی
+- ✅ Fusion: Wi-Fi/BLE/Cellular با ارتفاع ۰ تبدیل می‌شدند (۱۲۰۰ متر زیر زمین) → منابع افقی بدون قید عمودی
+- ✅ نقش‌های RBAC با نقش‌های طراحی هم‌راستا شد (operator/analyst/planner/commander/technical)
+
+**آزمون‌ها:** ۶۳ تست واحد/یکپارچگی (از جمله راه‌اندازی واقعی سرور روی پورت تصادفی) + ۲۶ بررسی مرورگر end-to-end در هر دو حالت `npm start` و `npm run dev`.
+
 ---
 
 **توسعه‌دهنده:** Claude AI  

@@ -8,7 +8,53 @@
 
 🟢 **تمام ۱۲ فاز تکمیل شد**
 
-## 🚀 شروع سریع
+## 🖥️ کنسول عملیات (Operations Console)
+
+رابط کاربری طراحی‌شده (Nocturne · RTL/فارسی) به‌صورت یک برنامهٔ یکپارچه پیاده‌سازی شده است: داشبورد React در `dashboard/` و بک‌اند API/WebSocket در `services/server/` که روی ماژول‌های موجود پلتفرم (موتور ریسک، تلفیق Kalman، موتور شبیه‌سازی، JWT/RBAC، Gateway) ساخته شده است. این حالت **بدون Docker** و بدون پایگاه داده اجرا می‌شود (وضعیت در حافظه).
+
+```bash
+npm run setup          # نصب وابستگی‌های root، services و dashboard
+npm run build          # بیلد داشبورد + typecheck سرویس‌ها
+npm start              # UI + API + WebSocket روی http://localhost:8000
+# یا حالت توسعه: API با watch روی :8000 و Vite روی :3000 (با proxy)
+npm run dev
+```
+
+حساب‌های نمونه (گذرواژه: `demo`، قابل تغییر با `DEMO_PASSWORD`):
+
+| کاربر | نقش | خانهٔ تطبیقی |
+|------|-----|-------------|
+| `maryam` | اپراتور داشبورد | زنده |
+| `reza` | تحلیلگر امنیتی | تحلیل |
+| `ali` | برنامه‌ریز اسکورت | برنامه‌ریزی |
+| `ahmadi` | فرمانده (تنها نقش مجاز به تأیید پلن) | زنده |
+| `sara` | تیم فنی | دارایی‌ها |
+
+در `NODE_ENV=production` مقدار `JWT_SECRET` الزامی است و سوییچ نقش از منو (`DEMO_MODE`) به‌طور پیش‌فرض غیرفعال می‌شود. اجرای Docker: `make console`.
+
+### ساختار
+
+```
+dashboard/src/
+  app/        Shell (شبکهٔ واکنش‌گرا mobile/tablet/desktop/wall)، actions، roles، permissions، hooks
+  api/        client (JWT + صف آفلاین)، types
+  realtime/   streams (Socket.IO، resume بر اساس seq، حذف تکرار با integrity)، envelopes
+  stores/     Zustand: ops (داده + UI)، session
+  map/        صحنهٔ three.js (ترِین آفلاین، شبکهٔ ریسک شش‌ضلعی، مسیرهای PACE، واحدها با CEP)
+  workspaces/ live · analysis · planning · sim · assets · admin
+  ui/         AlertCard، CommandPalette (Ctrl+K)، PANIC، منوی حساب، Toast، بنر آفلاین
+  i18n/       fa.json · en.json
+services/server/
+  app.ts      REST + Socket.IO، حلقه‌های ۵Hz تله‌متری و ۱Hz ریسک، میزبانی داشبورد بیلدشده
+  realtime.ts envelope با seq + sha256 و بافر ۱۰k برای replay
+  domain/     alerts (چرخهٔ ACK/ارتقا)، units (تلفیق FusionOrchestrator)، risk، plans (PACE)، sim، devices، detections، admin، users
+```
+
+میان‌برها: `Alt+1…6` فضاهای کاری، `Ctrl+K` جستجو/فرمان، `Esc` بستن. از منوی حساب می‌توان نقش، زبان (فا/EN)، «شبیه‌سازی قطع شبکه» و «نمایش نقاط اتصال API» را تغییر داد.
+
+![کنسول زنده](docs/screenshots/live.png)
+
+## 🚀 شروع سریع (زیرساخت کامل با Docker)
 
 ### پیش‌نیازها
 

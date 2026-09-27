@@ -1,0 +1,94 @@
+{
+  "id": "s3",
+  "name": "قطع کامل ارتباط تیم",
+  "category": "ارتباطات",
+  "difficulty": "متوسط",
+  "nominal_minutes": 12,
+  "description": "آزمون بافر آفلاین و همگام‌سازی پس از اتصال.",
+  "metrics": {
+    "detection_time": "۱۵ ثانیه",
+    "ack_time": "۴۰ ثانیه",
+    "protocol_compliance": "۸۹٪",
+    "route_decision": "نگه‌داشت موقعیت"
+  },
+  "steps": [
+    {
+      "time_offset_ms": 2250,
+      "events": [
+        {
+          "message": "آخرین سیگنال تیم چارلی",
+          "level": "warning"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "charlie",
+          "lat": 35.681115,
+          "lon": 51.396742,
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 1
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 9000,
+      "events": [
+        {
+          "message": "قطع ارتباط تیم چارلی · بافر محلی فعال",
+          "level": "error"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "comms_loss",
+          "severity": "high",
+          "message": "قطع ارتباط تیم چارلی"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 24750,
+      "events": [
+        {
+          "message": "اعزام پهپاد D-01 برای رله ارتباطی",
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 33750,
+      "events": [
+        {
+          "message": "اتصال مجدد · ۱۲۴ پاکت بدون تکرار همگام شد",
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "charlie",
+          "lat": 35.681295,
+          "lon": 51.397406,
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 1
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": "پایان سناریو",
+          "level": "info"
+        }
+      ]
+    }
+  ],
+  "duration_ms": 45000,
+  "loop": false,
+  "center": {
+    "lat": 35.6892,
+    "lon": 51.389
+  }
+}

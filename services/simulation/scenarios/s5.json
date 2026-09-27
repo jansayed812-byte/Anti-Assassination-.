@@ -1,0 +1,84 @@
+{
+  "id": "s5",
+  "name": "تخلیهٔ پزشکی اضطراری",
+  "category": "پزشکی",
+  "difficulty": "سخت",
+  "nominal_minutes": 20,
+  "description": "مسیر E به مرکز درمانی و هماهنگی منابع.",
+  "metrics": {
+    "detection_time": "۵ ثانیه",
+    "ack_time": "۱۲ ثانیه",
+    "protocol_compliance": "۹۶٪",
+    "route_decision": "صحیح · مسیر E"
+  },
+  "steps": [
+    {
+      "time_offset_ms": 2700,
+      "events": [
+        {
+          "message": "گزارش مصدوم در کاروان آلفا",
+          "level": "error"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "medevac",
+          "severity": "high",
+          "message": "درخواست تخلیهٔ پزشکی"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 9000,
+      "events": [
+        {
+          "message": "فعال‌سازی مسیر E · هماهنگی با MF-001",
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 24750,
+      "events": [
+        {
+          "message": "رسیدن به خانهٔ امن SH-001",
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "lat": 35.686505,
+          "lon": 51.373516,
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 36000,
+      "events": [
+        {
+          "message": "تحویل به تیم پزشکی",
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": "پایان سناریو",
+          "level": "info"
+        }
+      ]
+    }
+  ],
+  "duration_ms": 45000,
+  "loop": false,
+  "center": {
+    "lat": 35.6892,
+    "lon": 51.389
+  }
+}

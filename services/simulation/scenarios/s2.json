@@ -1,0 +1,117 @@
+{
+  "id": "s2",
+  "name": "اختلال و جعل GNSS",
+  "category": "جنگ الکترونیک",
+  "difficulty": "متوسط",
+  "nominal_minutes": 10,
+  "description": "افت GNSS و ادامهٔ ردیابی با INS/Wi-Fi.",
+  "metrics": {
+    "detection_time": "۸ ثانیه",
+    "ack_time": "۳۱ ثانیه",
+    "protocol_compliance": "۹۱٪",
+    "route_decision": "ادامه روی P با INS"
+  },
+  "steps": [
+    {
+      "time_offset_ms": 0,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "lat": 35.675725,
+          "lon": 51.370197,
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 4500,
+      "events": [
+        {
+          "message": "افزایش HDOP به ۴٫۸ · احتمال اختلال",
+          "level": "warning"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "lat": 35.679319,
+          "lon": 51.375728,
+          "accuracy_m": 12,
+          "confidence": 0.6,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 11250,
+      "events": [
+        {
+          "message": "تشخیص جعل GNSS · جهش ۸۰۰ متری رد شد",
+          "level": "error"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "gnss_spoofing",
+          "severity": "high",
+          "message": "جعل GNSS تشخیص داده شد"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 18000,
+      "events": [
+        {
+          "message": "ردیابی با INS + Wi-Fi RTT · CEP95 ۹٫۸m",
+          "level": "warning"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "lat": 35.684708,
+          "lon": 51.384576,
+          "accuracy_m": 9.8,
+          "confidence": 0.5,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 31500,
+      "events": [
+        {
+          "message": "بازیابی GNSS معتبر · تلفیق کامل",
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "lat": 35.691356,
+          "lon": 51.393867,
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": "پایان سناریو",
+          "level": "info"
+        }
+      ]
+    }
+  ],
+  "duration_ms": 45000,
+  "loop": false,
+  "center": {
+    "lat": 35.6892,
+    "lon": 51.389
+  }
+}
