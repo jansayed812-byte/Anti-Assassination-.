@@ -4,8 +4,10 @@
  */
 import { createHash } from 'crypto';
 import { getAuditLog, type AuditEntry } from '../../auth/auth-middleware';
+import { L, localDigits } from '../i18n/messages';
+import { tri, type Tri } from '../i18n/types';
 
-export interface MaintenanceTask { id: string; name: string; schedule: string; last_run: number | null; status: 'ok' | 'partial' | 'due' }
+export interface MaintenanceTask { id: string; name: Tri; schedule: Tri; last_run: number | null; status: 'ok' | 'partial' | 'due' }
 export interface ManagedKey { name: string; algorithm: string; created_at: number; rotate_every_days: number }
 
 export class LatencyTracker {
@@ -32,6 +34,16 @@ export function verifyAuditChain(log: AuditEntry[] = getAuditLog()): { entries: 
 
 const DAY = 86_400_000;
 
+/** Numeric text in all three languages (Afghan digits and ٪ for Dari/Pashto). */
+const num = (s: string): Tri => {
+  const af = (lang: 'dr' | 'ps') => localDigits(lang, s).replace(/%/g, '٪');
+  return { dr: af('dr'), ps: af('ps'), en: s };
+};
+const DAILY = tri('روزانه', 'ورځنی', 'Daily');
+const WEEKLY = tri('هفته‌وار', 'اونیز', 'Weekly');
+const MONTHLY = tri('ماهوار', 'میاشتنی', 'Monthly');
+const at = (base: Tri, hhmm: string): Tri => ({ dr: `${base.dr} ${localDigits('dr', hhmm)}`, ps: `${base.ps} ${localDigits('ps', hhmm)}`, en: `${base.en} ${hhmm}` });
+
 export class AdminService {
   readonly startedAt = Date.now();
   private tasks: MaintenanceTask[];
@@ -40,14 +52,19 @@ export class AdminService {
 
   constructor(private latency: LatencyTracker, private live: () => { cep95_m: number; telemetry_ratio: number; envelopes: number }) {
     const now = Date.now();
-    const t = (id: string, name: string, schedule: string, agoMs: number | null, status: MaintenanceTask['status'] = 'ok'): MaintenanceTask => ({ id, name, schedule, last_run: agoMs == null ? null : now - agoMs, status });
+    const t = (id: string, name: Tri, schedule: Tri, agoMs: number | null, status: MaintenanceTask['status'] = 'ok'): MaintenanceTask => ({ id, name, schedule, last_run: agoMs == null ? null : now - agoMs, status });
     this.tasks = [
-      t('backup', 'پشتیبان‌گیری پایگاه داده', 'روزانه ۰۲:۰۰', 10 * 3600_000, 'partial'), t('logs', 'چرخش لاگ‌ها', 'روزانه', 5 * 3600_000),
-      t('cache', 'پاک‌سازی کش', 'ساعتی', 30 * 60_000), t('model', 'به‌روزرسانی مدل تهدید', 'هفتگی', 3 * DAY),
-      t('calib', 'کالیبراسیون حسگرها', 'هفتگی', 5 * DAY), t('keys', 'چرخش کلیدها', 'ماهانه', 27 * DAY, 'due'),
-      t('vacuum', 'بهینه‌سازی پایگاه داده', 'هفتگی', 2 * DAY), t('certs', 'بررسی گواهی‌ها', 'روزانه', 6 * 3600_000),
-      t('tiles', 'به‌روزرسانی کاشی نقشه آفلاین', 'ماهانه', 12 * DAY), t('scan', 'اسکن امنیتی', 'روزانه ۰۶:۰۰', 8 * 3600_000),
-      t('health', 'بررسی سلامت سرویس‌ها', '۵ دقیقه', 60_000),
+      t('backup', tri('بک‌آپ دیتابیس', 'د ډیټابیس بیک‌اپ', 'Database backup'), at(DAILY, '02:00'), 10 * 3600_000, 'partial'),
+      t('logs', tri('چرخش لاگ‌ها', 'د لاګونو ګرځول', 'Log rotation'), DAILY, 5 * 3600_000),
+      t('cache', tri('پاک‌کاری کش', 'د کش پاکول', 'Cache purge'), tri('ساعتوار', 'هر ساعت', 'Hourly'), 30 * 60_000),
+      t('model', tri('تجدید مدل تهدید', 'د ګواښ ماډل تازه کول', 'Threat model update'), WEEKLY, 3 * DAY),
+      t('calib', tri('کالیبراسیون سنسورها', 'د سینسرونو کالیبرېشن', 'Sensor calibration'), WEEKLY, 5 * DAY),
+      t('keys', tri('تبدیل کلیدها', 'د کلیلونو بدلول', 'Key rotation'), MONTHLY, 27 * DAY, 'due'),
+      t('vacuum', tri('بهینه‌سازی دیتابیس', 'د ډیټابیس اصلاح', 'Database optimisation'), WEEKLY, 2 * DAY),
+      t('certs', tri('بررسی تصدیق‌نامه‌ها', 'د سندونو کتنه', 'Certificate check'), DAILY, 6 * 3600_000),
+      t('tiles', tri('تجدید تایل‌های نقشهٔ آفلاین', 'د آفلاین نقشې ټایلونه تازه کول', 'Offline map tile refresh'), MONTHLY, 12 * DAY),
+      t('scan', tri('اسکن امنیتی', 'امنیتي سکن', 'Security scan'), at(DAILY, '06:00'), 8 * 3600_000),
+      t('health', tri('بررسی صحت سرویس‌ها', 'د خدمتونو روغتیا کتنه', 'Service health check'), tri('هر ۵ دقیقه', 'هرې ۵ دقیقې', 'Every 5 min'), 60_000),
     ];
     this.keys = [
       { name: 'jwt-signing', algorithm: 'HS256', created_at: now - 87 * DAY, rotate_every_days: 90 },
@@ -61,18 +78,18 @@ export class AdminService {
     const l = this.live();
     const p95 = this.latency.p95();
     const uptimeH = (Date.now() - this.startedAt) / 3600_000;
-    const m = (id: string, name: string, value: string, target: string, ok: boolean, live = false) => ({ id, name, value, target, ok, live });
+    const m = (id: string, name: Tri, value: Tri, target: Tri, ok: boolean, live = false) => ({ id, name, value, target, ok, live });
     return [
-      m('availability', 'دسترس‌پذیری سیستم', '۹۹٫۹۲٪', '≥ ۹۹٫۹٪', true),
-      m('api_p95', 'تأخیر p95 API', `${p95} ms`, '≤ ۲۰۰ ms', p95 <= 200, true),
-      m('alert_delivery', 'تأخیر تحویل هشدار', '< ۱۰۰ ms', '≤ ۱ s', true, true),
-      m('cep95', 'دقت موقعیت CEP95', `${l.cep95_m} m`, '≤ ۵ m', l.cep95_m <= 5, true),
-      m('telemetry', 'پایداری استریم تله‌متری', `${(l.telemetry_ratio * 100).toFixed(1)}٪`, '≥ ۹۹٪', l.telemetry_ratio >= 0.99, true),
-      m('integrity', 'یکپارچگی داده', '۱۰۰٪', '۱۰۰٪', true, true),
-      m('backup', 'موفقیت پشتیبان‌گیری', '۹۶٪', '≥ ۹۸٪', false),
-      m('mttr', 'MTTR', '۲۲ دقیقه', '≤ ۳۰ دقیقه', true),
-      m('response', 'زمان پاسخ به رخداد', '۴ دقیقه', '≤ ۵ دقیقه', true),
-      m('uptime', 'زمان کارکرد سرور', `${uptimeH.toFixed(1)} h`, '—', true, true),
+      m('availability', tri('دسترسی سیستم', 'د سیستم لاسرسی', 'System availability'), num('99.92%'), num('≥ 99.9%'), true),
+      m('api_p95', tri('تأخیر p95 API', 'د API p95 ځنډ', 'API p95 latency'), num(`${p95} ms`), num('≤ 200 ms'), p95 <= 200, true),
+      m('alert_delivery', tri('تأخیر رسیدن اخطار', 'د خبرتیا رسېدو ځنډ', 'Alert delivery latency'), num('< 100 ms'), num('≤ 1 s'), true, true),
+      m('cep95', tri('دقت موقعیت CEP95', 'د موقعیت دقت CEP95', 'Position accuracy CEP95'), L('unit.m', { n: l.cep95_m }), num('≤ 5 m'), l.cep95_m <= 5, true),
+      m('telemetry', tri('پایداری جریان تله‌متری', 'د ټیلي‌میټري جریان ثبات', 'Telemetry stream stability'), num(`${(l.telemetry_ratio * 100).toFixed(1)}%`), num('≥ 99%'), l.telemetry_ratio >= 0.99, true),
+      m('integrity', tri('تمامیت معلومات', 'د معلوماتو بشپړتیا', 'Data integrity'), num('100%'), num('100%'), true, true),
+      m('backup', tri('موفقیت بک‌آپ', 'د بیک‌اپ بریا', 'Backup success'), num('96%'), num('≥ 98%'), false),
+      m('mttr', tri('MTTR', 'MTTR', 'MTTR'), L('unit.min', { n: 22 }), L('unit.min', { n: '≤ 30' }), true),
+      m('response', tri('زمان پاسخ به رویداد', 'پېښې ته د ځواب وخت', 'Incident response time'), L('unit.min', { n: 4 }), L('unit.min', { n: '≤ 5' }), true),
+      m('uptime', tri('زمان کارکرد سرور', 'د سرور د کار وخت', 'Server uptime'), L('unit.h', { n: uptimeH.toFixed(1) }), num('—'), true, true),
     ];
   }
 
@@ -86,19 +103,22 @@ export class AdminService {
 
   compliance() {
     return [
-      { framework: 'ISO/IEC 27001', score: 87, note: '۹۳ از ۱۰۷ کنترل پیاده‌سازی شده' },
-      { framework: 'NIST CSF', score: 82, note: 'Identify · Protect · Detect · Respond · Recover' },
+      { framework: 'ISO/IEC 27001', score: 87, note: tri('۹۳ از ۱۰۷ کنترول تطبیق شده', 'له ۱۰۷ کنترولونو ۹۳ پلي شوي', '93 of 107 controls implemented') },
+      { framework: 'NIST CSF', score: 82, note: tri('شناسایی · حفاظت · کشف · پاسخ · بازیابی', 'پېژندنه · ساتنه · موندنه · ځواب · بیا رغونه', 'Identify · Protect · Detect · Respond · Recover') },
     ];
   }
 
   dataClasses() {
+    const SECRET = tri('سری', 'سري', 'Secret'), CONF = tri('محرم', 'محرم', 'Confidential'), INTERNAL = tri('داخلی', 'داخلي', 'Internal');
+    const days = (n: number) => tri(`${localDigits('dr', n)} روز`, `${localDigits('ps', n)} ورځې`, `${n} days`);
+    const years = (n: number) => tri(`${localDigits('dr', n)} سال`, `${localDigits('ps', n)} ${n === 1 ? 'کال' : 'کاله'}`, `${n} ${n === 1 ? 'year' : 'years'}`);
     return [
-      { name: 'موقعیت لحظه‌ای واحدها', classification: 'سری', retention: '۹۰ روز', encryption: 'AES-256-GCM' },
-      { name: 'ویدئو پهپاد', classification: 'محرمانه', retention: '۳۰ روز', encryption: 'AES-256-GCM' },
-      { name: 'پلن‌های اسکورت', classification: 'سری', retention: '۱ سال', encryption: 'AES-256-GCM' },
-      { name: 'گزارش‌های AAR', classification: 'محرمانه', retention: '۵ سال', encryption: 'AES-256' },
-      { name: 'لاگ حسابرسی', classification: 'داخلی', retention: '۷ سال', encryption: 'SHA-256 chain' },
-      { name: 'داده آموزشی', classification: 'داخلی', retention: '۱ سال', encryption: 'AES-256' },
+      { name: tri('موقعیت زندهٔ واحدها', 'د واحدونو ژوندی موقعیت', 'Live unit positions'), classification: SECRET, retention: days(90), encryption: 'AES-256-GCM' },
+      { name: tri('ویدیوی درون', 'د ډرون ویډیو', 'Drone video'), classification: CONF, retention: days(30), encryption: 'AES-256-GCM' },
+      { name: tri('پلان‌های اسکورت', 'د ساتنې پلانونه', 'Escort plans'), classification: SECRET, retention: years(1), encryption: 'AES-256-GCM' },
+      { name: tri('راپورهای AAR', 'د AAR راپورونه', 'AAR reports'), classification: CONF, retention: years(5), encryption: 'AES-256' },
+      { name: tri('لاگ تفتیش', 'د تفتیش لاګ', 'Audit log'), classification: INTERNAL, retention: years(7), encryption: 'SHA-256 chain' },
+      { name: tri('معلومات آموزشی', 'روزنیز معلومات', 'Training data'), classification: INTERNAL, retention: years(1), encryption: 'AES-256' },
     ];
   }
 
@@ -132,11 +152,11 @@ export class AdminService {
 
   training() {
     return [
-      { role: 'operator', name: 'اپراتور داشبورد', modules: '۶ ماژول · نقشه، هشدار، ACK', completion: 92 },
-      { role: 'analyst', name: 'تحلیلگر امنیتی', modules: '۸ ماژول · ریسک، تحلیل منطقه', completion: 78 },
-      { role: 'planner', name: 'برنامه‌ریز اسکورت', modules: '۷ ماژول · PACE، ایست‌ها', completion: 85 },
-      { role: 'commander', name: 'فرمانده', modules: '۵ ماژول · تأیید، ارتقا، AAR', completion: 100 },
-      { role: 'technical', name: 'تیم فنی', modules: '۹ ماژول · دستگاه، SLA، امنیت', completion: 64 },
+      { role: 'operator', name: tri('اپراتور داشبورد', 'د ډشبورډ اپرېټر', 'Dashboard operator'), modules: tri('۶ ماژول · نقشه، اخطار، تأیید', '۶ ماډیولونه · نقشه، خبرتیا، تایید', '6 modules · map, alerts, ACK'), completion: 92 },
+      { role: 'analyst', name: tri('تحلیلگر امنیتی', 'امنیتي شنونکی', 'Security analyst'), modules: tri('۸ ماژول · ریسک، تحلیل ساحه', '۸ ماډیولونه · خطر، د سیمې تحلیل', '8 modules · risk, area analysis'), completion: 78 },
+      { role: 'planner', name: tri('پلانگذار اسکورت', 'د ساتنې پلان جوړونکی', 'Escort planner'), modules: tri('۷ ماژول · PACE، پوسته‌ها', '۷ ماډیولونه · PACE، پوستې', '7 modules · PACE, checkpoints'), completion: 85 },
+      { role: 'commander', name: tri('قوماندان', 'قوماندان', 'Commander'), modules: tri('۵ ماژول · تأیید، ارتقا، AAR', '۵ ماډیولونه · تایید، لوړول، AAR', '5 modules · approval, escalation, AAR'), completion: 100 },
+      { role: 'technical', name: tri('تیم تخنیکی', 'تخنیکي ټیم', 'Technical team'), modules: tri('۹ ماژول · دستگاه، SLA، امنیت', '۹ ماډیولونه · وسیلې، SLA، امنیت', '9 modules · devices, SLA, security'), completion: 64 },
     ];
   }
 }

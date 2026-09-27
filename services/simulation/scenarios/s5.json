@@ -1,22 +1,44 @@
 {
   "id": "s5",
-  "name": "تخلیهٔ پزشکی اضطراری",
-  "category": "پزشکی",
-  "difficulty": "سخت",
+  "name": {
+    "dr": "انتقال عاجل مجروح",
+    "ps": "د ټپي بېړنی لېږد",
+    "en": "Emergency medical evacuation"
+  },
+  "category": {
+    "dr": "طبی",
+    "ps": "طبي",
+    "en": "Medical"
+  },
+  "difficulty": "hard",
   "nominal_minutes": 20,
-  "description": "مسیر E به مرکز درمانی و هماهنگی منابع.",
+  "description": {
+    "dr": "مسیر E تا خانهٔ امن و هماهنگی با شفاخانه.",
+    "ps": "E لاره تر خوندي کوره او له روغتون سره همغږي.",
+    "en": "Route E to the safe house and coordination with the hospital."
+  },
+  "duration_ms": 45000,
+  "loop": false,
   "metrics": {
-    "detection_time": "۵ ثانیه",
-    "ack_time": "۱۲ ثانیه",
-    "protocol_compliance": "۹۶٪",
-    "route_decision": "صحیح · مسیر E"
+    "detection_s": 5,
+    "ack_s": 12,
+    "compliance_pct": 96,
+    "route_decision": {
+      "dr": "درست · مسیر E",
+      "ps": "سم · E لاره",
+      "en": "Correct · route E"
+    }
   },
   "steps": [
     {
       "time_offset_ms": 2700,
       "events": [
         {
-          "message": "گزارش مصدوم در کاروان آلفا",
+          "message": {
+            "dr": "راپور زخمی در کاروان آلفا",
+            "ps": "د الفا په کاروان کې د ټپي راپور",
+            "en": "Casualty reported in convoy Alpha"
+          },
           "level": "error"
         }
       ],
@@ -24,7 +46,11 @@
         {
           "type": "medevac",
           "severity": "high",
-          "message": "درخواست تخلیهٔ پزشکی"
+          "message": {
+            "dr": "درخواست انتقال عاجل مجروح",
+            "ps": "د ټپي د بېړني لېږد غوښتنه",
+            "en": "Medical evacuation requested"
+          }
         }
       ]
     },
@@ -32,27 +58,37 @@
       "time_offset_ms": 9000,
       "events": [
         {
-          "message": "فعال‌سازی مسیر E · هماهنگی با MF-001",
+          "message": {
+            "dr": "فعال‌سازی مسیر E · هماهنگی با شفاخانه",
+            "ps": "د E لارې فعالول · له روغتون سره همغږي",
+            "en": "Route E activated · coordinating with the hospital"
+          },
           "level": "info"
         }
       ]
     },
     {
       "time_offset_ms": 24750,
-      "events": [
-        {
-          "message": "رسیدن به خانهٔ امن SH-001",
-          "level": "info"
-        }
-      ],
       "positions": [
         {
           "source_id": "alpha",
-          "lat": 35.686505,
-          "lon": 51.373516,
+          "at": {
+            "route": "E",
+            "frac": 1
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 12
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "رسیدن به خانهٔ امن",
+            "ps": "خوندي کور ته رسېدل",
+            "en": "Arrived at the safe house"
+          },
+          "level": "info"
         }
       ]
     },
@@ -60,7 +96,11 @@
       "time_offset_ms": 36000,
       "events": [
         {
-          "message": "تحویل به تیم پزشکی",
+          "message": {
+            "dr": "تحویل به تیم طبی",
+            "ps": "طبي ټیم ته سپارل",
+            "en": "Handed over to the medical team"
+          },
           "level": "info"
         }
       ]
@@ -69,16 +109,14 @@
       "time_offset_ms": 44550,
       "events": [
         {
-          "message": "پایان سناریو",
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
           "level": "info"
         }
       ]
     }
-  ],
-  "duration_ms": 45000,
-  "loop": false,
-  "center": {
-    "lat": 35.6892,
-    "lon": 51.389
-  }
+  ]
 }

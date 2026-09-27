@@ -4,10 +4,10 @@
  */
 import { createHash } from 'crypto';
 
-export type Channel = 'telemetry' | 'risk' | 'alerts' | 'sim' | 'plans' | 'devices';
+export type Channel = 'telemetry' | 'risk' | 'alerts' | 'sim' | 'plans' | 'devices' | 'blindspots' | 'sync';
 
 export interface Envelope<T = unknown> {
-  seq: number; ts: number; channel: Channel; data: T; integrity: string;
+  seq: number; ts: number; channel: Channel; data: T; integrity: string; branch?: string;
 }
 
 export function integrityOf(channel: Channel, seq: number, data: unknown): string {
@@ -19,11 +19,12 @@ export class RealtimeBus {
   private buffer: Envelope[] = [];
   private listeners = new Set<(e: Envelope) => void>();
 
-  constructor(private capacity = 10_000) {}
+  /** `branch` tags every envelope so clients watching several branches can tell the streams apart. */
+  constructor(private capacity = 10_000, readonly branch?: string) {}
 
   publish<T>(channel: Channel, data: T): Envelope<T> {
     const seq = ++this.seq;
-    const env: Envelope<T> = { seq, ts: Date.now(), channel, data, integrity: integrityOf(channel, seq, data) };
+    const env: Envelope<T> = { seq, ts: Date.now(), channel, data, integrity: integrityOf(channel, seq, data), ...(this.branch ? { branch: this.branch } : {}) };
     this.buffer.push(env);
     if (this.buffer.length > this.capacity) this.buffer.splice(0, this.buffer.length - this.capacity);
     for (const l of this.listeners) l(env);
@@ -36,7 +37,7 @@ export class RealtimeBus {
     const latest = new Map<Channel, Envelope>();
     const out: Envelope[] = [];
     for (const e of missed) {
-      if (e.channel === 'telemetry' || e.channel === 'risk' || e.channel === 'sim') latest.set(e.channel, e);
+      if (e.channel === 'telemetry' || e.channel === 'risk' || e.channel === 'sim' || e.channel === 'blindspots' || e.channel === 'sync') latest.set(e.channel, e);
       else out.push(e);
     }
     return [...out, ...latest.values()].sort((a, b) => a.seq - b.seq);

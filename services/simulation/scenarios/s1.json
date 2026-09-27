@@ -1,15 +1,33 @@
 {
   "id": "s1",
-  "name": "کمین در مسیر اصلی",
-  "category": "تهدید مسیر",
-  "difficulty": "سخت",
+  "name": {
+    "dr": "کمین در مسیر اصلی",
+    "ps": "په اصلي لاره کې کمین",
+    "en": "Ambush on the primary route"
+  },
+  "category": {
+    "dr": "تهدید مسیر",
+    "ps": "د لارې ګواښ",
+    "en": "Route threat"
+  },
+  "difficulty": "hard",
   "nominal_minutes": 15,
-  "description": "تشخیص تهدید روی مسیر P، سوئیچ به A و ارتقای هشدار.",
+  "description": {
+    "dr": "تشخیص تهدید روی مسیر P، تبدیل به مسیر A و ارتقای اخطار.",
+    "ps": "په P لاره کې د ګواښ پېژندل، A لارې ته اوښتل او د خبرتیا لوړول.",
+    "en": "Detect a threat on route P, switch to route A and escalate the alert."
+  },
+  "duration_ms": 45000,
+  "loop": false,
   "metrics": {
-    "detection_time": "۱ دقیقه ۱۲ ثانیه",
-    "ack_time": "۲۴ ثانیه",
-    "protocol_compliance": "۹۴٪",
-    "route_decision": "صحیح · P ← A"
+    "detection_s": 72,
+    "ack_s": 24,
+    "compliance_pct": 94,
+    "route_decision": {
+      "dr": "درست · از P به A",
+      "ps": "سم · له P څخه A ته",
+      "en": "Correct · P → A"
+    }
   },
   "steps": [
     {
@@ -17,8 +35,10 @@
       "positions": [
         {
           "source_id": "alpha",
-          "lat": 35.675725,
-          "lon": 51.370197,
+          "at": {
+            "route": "P",
+            "frac": 0.1
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 12
@@ -29,7 +49,11 @@
       "time_offset_ms": 3600,
       "events": [
         {
-          "message": "حرکت مشکوک در ۴۰۰ متری مسیر P",
+          "message": {
+            "dr": "حرکت مشکوک در ۴۰۰ متری مسیر P",
+            "ps": "د P لارې په ۴۰۰ مترۍ کې شکمن خوځښت",
+            "en": "Suspicious movement 400 m from route P"
+          },
           "level": "warning"
         }
       ],
@@ -37,8 +61,11 @@
         {
           "type": "suspicious_movement",
           "severity": "medium",
-          "lat": 35.687403,
-          "lon": 51.386346,
+          "at": {
+            "route": "P",
+            "frac": 0.45,
+            "side_m": 400
+          },
           "radius_m": 400,
           "confidence": 0.6,
           "evidence": [
@@ -51,7 +78,11 @@
       "time_offset_ms": 9900,
       "events": [
         {
-          "message": "YOLOv8: ۳ نفر مسلح · اطمینان ۸۹٪",
+          "message": {
+            "dr": "YOLOv8: ۳ نفر مسلح · اطمینان ۸۹٪",
+            "ps": "YOLOv8: ۳ وسله وال کسان · باور ۸۹٪",
+            "en": "YOLOv8: 3 armed persons · confidence 89%"
+          },
           "level": "error"
         }
       ],
@@ -59,8 +90,11 @@
         {
           "type": "armed_persons",
           "severity": "critical",
-          "lat": 35.690098,
-          "lon": 51.387894,
+          "at": {
+            "route": "P",
+            "frac": 0.5,
+            "side_m": 120
+          },
           "radius_m": 250,
           "confidence": 0.89,
           "evidence": [
@@ -72,8 +106,10 @@
       "positions": [
         {
           "source_id": "alpha",
-          "lat": 35.681115,
-          "lon": 51.379046,
+          "at": {
+            "route": "P",
+            "frac": 0.25
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 12
@@ -84,7 +120,11 @@
       "time_offset_ms": 15750,
       "events": [
         {
-          "message": "هشدار بحرانی به اپراتور ارسال شد",
+          "message": {
+            "dr": "اخطار بحرانی به اپراتور ارسال شد",
+            "ps": "بحراني خبرتیا اپرېټر ته ولېږل شوه",
+            "en": "Critical alert sent to the operator"
+          },
           "level": "critical"
         }
       ],
@@ -92,7 +132,11 @@
         {
           "type": "ambush",
           "severity": "critical",
-          "message": "کمین احتمالی روی مسیر P"
+          "message": {
+            "dr": "کمین احتمالی روی مسیر P",
+            "ps": "په P لاره کې احتمالي کمین",
+            "en": "Possible ambush on route P"
+          }
         }
       ]
     },
@@ -100,7 +144,11 @@
       "time_offset_ms": 21600,
       "events": [
         {
-          "message": "ACK اپراتور در ۲۴ ثانیه",
+          "message": {
+            "dr": "تأیید اپراتور در ۲۴ ثانیه",
+            "ps": "د اپرېټر تایید په ۲۴ ثانیو کې",
+            "en": "Operator ACK in 24 s"
+          },
           "level": "info"
         }
       ]
@@ -109,15 +157,21 @@
       "time_offset_ms": 27900,
       "events": [
         {
-          "message": "سوئیچ مسیر P ← A",
+          "message": {
+            "dr": "تبدیل مسیر از P به A",
+            "ps": "له P څخه A لارې ته اوښتل",
+            "en": "Route switched P → A"
+          },
           "level": "info"
         }
       ],
       "positions": [
         {
           "source_id": "alpha",
-          "lat": 35.684708,
-          "lon": 51.374622,
+          "at": {
+            "route": "A",
+            "frac": 0.35
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 12
@@ -128,15 +182,21 @@
       "time_offset_ms": 36000,
       "events": [
         {
-          "message": "عبور امن از CP-3",
+          "message": {
+            "dr": "عبور امن از CP-3",
+            "ps": "له CP-3 څخه خوندي تېرېدل",
+            "en": "Passed CP-3 safely"
+          },
           "level": "info"
         }
       ],
       "positions": [
         {
           "source_id": "alpha",
-          "lat": 35.698542,
-          "lon": 51.390106,
+          "at": {
+            "route": "A",
+            "frac": 0.75
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 12
@@ -147,26 +207,26 @@
       "time_offset_ms": 44550,
       "events": [
         {
-          "message": "پایان سناریو",
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
           "level": "info"
         }
       ],
       "positions": [
         {
           "source_id": "alpha",
-          "lat": 35.701776,
-          "lon": 51.406696,
+          "at": {
+            "route": "A",
+            "frac": 0.95
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 12
         }
       ]
     }
-  ],
-  "duration_ms": 45000,
-  "loop": false,
-  "center": {
-    "lat": 35.6892,
-    "lon": 51.389
-  }
+  ]
 }

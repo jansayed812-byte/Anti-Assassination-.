@@ -1,135 +1,137 @@
 /**
- * Escort plans with PACE routes (Primary / Alternate / Contingency / Emergency).
- * Route length, ETA, risk and checkpoints are computed from the route geometry and the live risk model.
+ * Escort plans: origin/destination, VIP level and the four PACE routes computed by the RoutePlanner on the
+ * branch road graph. Routes can be edited manually (waypoints); each edit bumps the route version, and editing
+ * an approved plan sends it back for approval.
  */
 import { EventEmitter } from 'events';
-import { alongPolyline, polylineLengthM, toLatLon, type LatLon, type XZ } from '../geo';
-import type { RiskModel } from './risk';
-import type { RiskLevel } from '../../threat/risk-engine';
+import type { LatLon } from '../geo';
+import { L, asTri } from '../i18n/messages';
+import type { LText, Tri } from '../i18n/types';
+import { PACE_KEYS, type PaceKey, type RoutePlan, type RoutePlanner } from '../routing/planner';
 
-export type PaceKey = 'P' | 'A' | 'C' | 'E';
 export type PlanStatus = 'running' | 'pending_approval' | 'approved' | 'closed' | 'draft';
-
-const ROUTE_XZ: Record<PaceKey, XZ[]> = {
-  P: [[-85, 75], [-45, 45], [-12, 22], [22, -12], [50, -42], [80, -70]],
-  A: [[-85, 75], [-65, 25], [-40, -22], [5, -52], [45, -72], [80, -70]],
-  C: [[-85, 75], [-25, 82], [28, 58], [62, 15], [84, -28], [80, -70]],
-  E: [[-85, 75], [-94, 52], [-82, 30], [-70, 15]],
-};
-const ROUTE_META: Record<PaceKey, { name: string; avg_kmh: number }> = {
-  P: { name: 'اصلی · بزرگراه شمالی', avg_kmh: 42 },
-  A: { name: 'جایگزین · کمربندی غربی', avg_kmh: 40 },
-  C: { name: 'اضطراری · مسیر کوهستانی', avg_kmh: 30 },
-  E: { name: 'بحران · بازگشت به خانهٔ امن', avg_kmh: 40 },
-};
-const CHECKPOINT_NAMES = ['میدان ورودی شمالی', 'تقاطع بزرگراه', 'پل شرقی'];
-export const RISK_THRESHOLD = 0.5;
-
-export const ROUTES: Record<PaceKey, LatLon[]> = Object.fromEntries(
-  (Object.keys(ROUTE_XZ) as PaceKey[]).map((k) => [k, ROUTE_XZ[k].map(toLatLon)]),
-) as Record<PaceKey, LatLon[]>;
-
-export interface PaceRoute {
-  k: PaceKey; name: string; path: LatLon[]; km: number; minutes: number; risk: number; risk_level: RiskLevel;
-  checkpoints: Array<{ id: string; name: string; eta_min: number; lat: number; lon: number }>;
-}
+export type Priority = 'security' | 'time' | 'balanced';
+export interface Place { name: LText; lat: number; lon: number }
+export interface RouteState { waypoints: LatLon[]; edited: boolean; version: number; edited_by?: string; edited_at?: number }
 
 export interface EscortPlan {
-  id: string; title: string; status: PlanStatus; vip_level: number; priority: 'security' | 'time' | 'balanced';
-  origin: string; destination: string; start: string; vehicles: number; active_route: PaceKey;
-  resources: string[]; approved_by?: string; submitted_by?: string;
+  id: string; title: LText; status: PlanStatus; vip_level: number; priority: Priority;
+  origin: Place; destination: Place; start: LText; vehicles: number; active_route: PaceKey; resources: LText[];
+  routes: Record<PaceKey, RouteState>; approved_by?: string; submitted_by?: string; version: number;
 }
 
-export interface PlanView extends EscortPlan {
-  pace: PaceRoute[];
-  validation: Array<{ ok: boolean; text: string }>;
+export interface PlanView extends EscortPlan { pace: RoutePlan[]; validation: Array<{ ok: boolean; text: Tri }> }
+
+export const RISK_THRESHOLD = 0.5;
+
+/** "origin → destination" in each language (the arrow points along the reading direction). */
+export function planTitle(origin: Place, destination: Place): Tri {
+  const o = asTri(origin.name), d = asTri(destination.name);
+  return { dr: `${o.dr} ← ${d.dr}`, ps: `${o.ps} ← ${d.ps}`, en: `${o.en} → ${d.en}` };
 }
+export class PlanError extends Error { constructor(public code: string, message: string) { super(message); } }
+
+const freshRoutes = (): Record<PaceKey, RouteState> => ({ P: { waypoints: [], edited: false, version: 1 }, A: { waypoints: [], edited: false, version: 1 }, C: { waypoints: [], edited: false, version: 1 }, E: { waypoints: [], edited: false, version: 1 } });
 
 export class PlanService extends EventEmitter {
   private plans = new Map<string, EscortPlan>();
+  private cache = new Map<string, { key: string; view: PlanView }>();
   private next = 416;
 
-  constructor(private risk: RiskModel, seed: EscortPlan[]) {
+  constructor(private planner: RoutePlanner, private stamp: () => string, seed: Array<Omit<EscortPlan, 'routes' | 'version'>>) {
     super();
-    for (const p of seed) this.plans.set(p.id, p);
-  }
-
-  routes(): PaceRoute[] {
-    return (Object.keys(ROUTES) as PaceKey[]).map((k) => {
-      const path = ROUTES[k];
-      const km = polylineLengthM(path) / 1000;
-      const minutes = Math.round((km / ROUTE_META[k].avg_kmh) * 60);
-      let worst = this.risk.assess(path[0], 0, `route:${k}`);
-      for (let i = 1; i <= 40; i++) {
-        const r = this.risk.assess(alongPolyline(path, i / 40), 0, `route:${k}`);
-        if (r.score > worst.score) worst = r;
-      }
-      const cps = k === 'E' ? [0.5] : [0.25, 0.5, 0.75];
-      return {
-        k, name: ROUTE_META[k].name, path, km: +km.toFixed(1), minutes, risk: worst.score, risk_level: worst.level,
-        checkpoints: [
-          ...cps.map((f, i) => ({ id: `CP-${i + 1}`, name: CHECKPOINT_NAMES[i], eta_min: Math.round(minutes * f), ...alongPolyline(path, f) })),
-          { id: 'DEST', name: k === 'E' ? 'خانهٔ امن SH-001' : 'ورودی امن مقصد', eta_min: minutes, ...path[path.length - 1] },
-        ],
-      };
-    });
+    for (const p of seed) this.plans.set(p.id, { ...p, routes: freshRoutes(), version: 1 });
   }
 
   list(): PlanView[] { return [...this.plans.values()].map((p) => this.view(p)); }
   get(id: string): PlanView | undefined { const p = this.plans.get(id); return p && this.view(p); }
-  running(): EscortPlan | undefined { return [...this.plans.values()].find((p) => p.status === 'running'); }
+  running(): PlanView | undefined { const p = [...this.plans.values()].find((x) => x.status === 'running'); return p && this.view(p); }
+  raw(): EscortPlan[] { return [...this.plans.values()]; }
 
-  create(input: { origin: string; destination: string; vip_level: number; priority: EscortPlan['priority'] }, by: string): PlanView {
+  /** Active-route corridors of plans that are live or about to be (used by the blind-spot analysis). */
+  corridors(): Array<{ plan: string; route: string; path: LatLon[] }> {
+    return this.list().filter((p) => p.status !== 'closed').flatMap((p) => {
+      const r = p.pace.find((x) => x.k === p.active_route);
+      return r ? [{ plan: p.id, route: r.k, path: r.path }] : [];
+    });
+  }
+
+  create(input: { origin: Place; destination: Place; vip_level: number; priority: Priority; start?: LText }, by: string): PlanView {
     const id = `ESC-0${this.next++}`;
     const plan: EscortPlan = {
-      id, title: `${input.origin.split('·')[0].trim()} ← ${input.destination.split('·')[0].trim()}`, status: 'draft',
-      vip_level: input.vip_level, priority: input.priority, origin: input.origin, destination: input.destination,
-      start: 'تعیین نشده', vehicles: input.vip_level >= 4 ? 4 : 3,
-      active_route: this.safestRoute(input.priority), resources: ['۲ خودروی زرهی', 'تیم پشتیبان براوو', 'پهپاد D-01', 'MF-001 روی مسیر'],
-      submitted_by: by,
+      id, title: planTitle(input.origin, input.destination),
+      status: 'draft', vip_level: input.vip_level, priority: input.priority, origin: input.origin, destination: input.destination,
+      start: input.start ?? L('plan.tbd'), vehicles: input.vip_level >= 4 ? 4 : 3, active_route: 'P',
+      resources: [L('res.armored', { n: input.vip_level >= 4 ? 3 : 2 })], routes: freshRoutes(), submitted_by: by, version: 1,
     };
     this.plans.set(id, plan);
+    const v = this.view(plan);
+    if (input.priority === 'time') {
+      const fastest = [...v.pace].filter((r) => r.k !== 'E').sort((a, b) => a.eta_min - b.eta_min)[0];
+      if (fastest) plan.active_route = fastest.k;
+    }
     this.emit('changed', this.view(plan));
     return this.view(plan);
   }
 
-  setActiveRoute(id: string, k: PaceKey): PlanView { return this.update(id, { active_route: k }); }
-  submit(id: string, by: string): PlanView { return this.update(id, { status: 'pending_approval', submitted_by: by }); }
+  setActiveRoute(id: string, k: PaceKey): PlanView { return this.update(id, (p) => ({ ...p, active_route: k })); }
+
+  editRoute(id: string, k: PaceKey, waypoints: LatLon[], by: string): PlanView {
+    if (!PACE_KEYS.includes(k)) throw new PlanError('bad_route', 'route must be P, A, C or E');
+    if (waypoints.length > 12) throw new PlanError('too_many_waypoints', 'at most 12 waypoints');
+    for (const w of waypoints) if (!Number.isFinite(w.lat) || !Number.isFinite(w.lon) || Math.abs(w.lat) > 90 || Math.abs(w.lon) > 180) throw new PlanError('bad_waypoint', 'invalid waypoint');
+    return this.update(id, (p) => {
+      if (p.status === 'closed') throw new PlanError('plan_closed', `plan ${id} is closed`);
+      const prev = p.routes[k];
+      const routes = { ...p.routes, [k]: { waypoints: waypoints.map((w) => ({ lat: +w.lat.toFixed(6), lon: +w.lon.toFixed(6) })), edited: waypoints.length > 0, version: prev.version + 1, edited_by: by, edited_at: Date.now() } };
+      const reApprove = p.status === 'approved';
+      return { ...p, routes, status: reApprove ? 'pending_approval' : p.status, approved_by: reApprove ? undefined : p.approved_by };
+    });
+  }
+
+  submit(id: string, by: string): PlanView {
+    return this.update(id, (p) => {
+      if (p.status === 'running' || p.status === 'closed') throw new PlanError('plan_state', `plan ${id} is ${p.status}`);
+      return { ...p, status: 'pending_approval', submitted_by: by };
+    });
+  }
+
   approve(id: string, by: string): PlanView {
-    const p = this.plans.get(id);
-    if (!p) throw new Error(`plan not found: ${id}`);
-    if (p.status === 'running' || p.status === 'closed') throw new Error(`plan ${id} is ${p.status}`);
-    return this.update(id, { status: 'approved', approved_by: by });
+    return this.update(id, (p) => {
+      if (p.status === 'running' || p.status === 'closed') throw new PlanError('plan_state', `plan ${id} is ${p.status}`);
+      return { ...p, status: 'approved', approved_by: by };
+    });
   }
 
-  private safestRoute(priority: EscortPlan['priority']): PaceKey {
-    const r = this.routes().filter((x) => x.k !== 'E');
-    if (priority === 'time') return r.sort((a, b) => a.minutes - b.minutes)[0].k;
-    if (priority === 'security') return r.sort((a, b) => a.risk - b.risk)[0].k;
-    return r.sort((a, b) => a.risk * a.minutes - b.risk * b.minutes)[0].k;
-  }
-
-  private update(id: string, patch: Partial<EscortPlan>): PlanView {
+  private update(id: string, fn: (p: EscortPlan) => EscortPlan): PlanView {
     const p = this.plans.get(id);
-    if (!p) throw new Error(`plan not found: ${id}`);
-    const next = { ...p, ...patch };
+    if (!p) throw new PlanError('plan_not_found', `plan not found: ${id}`);
+    const next = { ...fn(p), version: p.version + 1 };
     this.plans.set(id, next);
     const v = this.view(next);
     this.emit('changed', v);
     return v;
   }
 
+  /** Views are cached per plan version and risk/coverage state. */
   private view(p: EscortPlan): PlanView {
-    const pace = this.routes();
-    const risky = pace.filter((r) => r.risk > RISK_THRESHOLD);
+    const key = `${p.version}|${this.stamp()}`;
+    const hit = this.cache.get(p.id);
+    if (hit && hit.key === key) return hit.view;
+    const wps = Object.fromEntries(PACE_KEYS.map((k) => [k, p.routes[k].waypoints])) as Record<PaceKey, LatLon[]>;
+    const pace = this.planner.pace(p.origin, p.destination, wps);
+    const risky = pace.filter((r) => r.max_risk > RISK_THRESHOLD);
+    const primary = pace.find((r) => r.k === 'P');
+    const minVehicles = p.vip_level >= 4 ? 4 : 3;
     const validation = [
-      { ok: pace.length === 4, text: `هر ${pace.length} مسیر PACE تعریف شده‌اند` },
-      { ok: true, text: 'پوشش ارتباطی روی ۹۶٪ مسیرها' },
-      ...(risky.length
-        ? risky.map((r) => ({ ok: false, text: `ریسک مسیر ${r.k} (${r.risk.toFixed(2)}) بالاتر از آستانهٔ ${RISK_THRESHOLD}` }))
-        : [{ ok: true, text: `ریسک همهٔ مسیرها زیر آستانهٔ ${RISK_THRESHOLD}` }]),
-      { ok: p.vehicles >= (p.vip_level >= 4 ? 4 : 3), text: 'منابع با سطح VIP هم‌خوانی دارند' },
+      pace.length === 4 ? { ok: true, text: L('val.pace', { n: 4 }) } : { ok: false, text: L('val.paceMissing', { n: pace.length }) },
+      { ok: (primary?.coverage_pct ?? 0) >= 90, text: L('val.coverage', { pct: primary?.coverage_pct ?? 0 }) },
+      ...(risky.length ? risky.map((r) => ({ ok: false, text: L('val.risk', { k: r.k, risk: r.max_risk.toFixed(2), th: RISK_THRESHOLD }) })) : [{ ok: true, text: L('val.riskOk', { th: RISK_THRESHOLD }) }]),
+      p.vehicles >= minVehicles ? { ok: true, text: L('val.resources') } : { ok: false, text: L('val.resourcesLow', { v: p.vip_level, n: minVehicles }) },
+      ...PACE_KEYS.filter((k) => p.routes[k].edited).map((k) => ({ ok: true, text: L('val.edited', { k, v: p.routes[k].version }) })),
     ];
-    return { ...p, pace, validation };
+    const view: PlanView = { ...p, pace, validation };
+    this.cache.set(p.id, { key, view });
+    return view;
   }
 }

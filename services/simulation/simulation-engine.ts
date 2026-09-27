@@ -3,7 +3,7 @@
  * Plays a scenario on a virtual clock that supports pause/resume and speed changes.
  */
 import { EventEmitter } from 'events';
-import { ScenarioConfig, ScenarioStep, ScenarioReport, ScenarioTimelineEvent } from './scenario-types';
+import { scenarioText, type ScenarioConfig, type ScenarioStep, type ScenarioReport, type ScenarioTimelineEvent } from './scenario-types';
 
 export type SimulationEvent =
   | { type: 'position'; data: unknown }
@@ -129,7 +129,7 @@ export class SimulationEngine extends EventEmitter {
 
   private _finish(): void {
     const scenario = this.currentScenario!;
-    const report: ScenarioReport = { scenario_id: scenario.id, scenario_name: scenario.name, started_at: new Date(this.startTime).toISOString(), finished_at: new Date().toISOString(), duration_ms: Date.now()-this.startTime, total_steps: scenario.steps.length, events_emitted: this.counters.events, positions_emitted: this.counters.positions, incidents_emitted: this.counters.incidents, alerts_emitted: this.counters.alerts };
+    const report: ScenarioReport = { scenario_id: scenario.id, scenario_name: scenarioText(scenario.name), started_at: new Date(this.startTime).toISOString(), finished_at: new Date().toISOString(), duration_ms: Date.now()-this.startTime, total_steps: scenario.steps.length, events_emitted: this.counters.events, positions_emitted: this.counters.positions, incidents_emitted: this.counters.incidents, alerts_emitted: this.counters.alerts };
     this.running = false;
     this.finished = true;
     this.elapsedMs = scenario.duration_ms;

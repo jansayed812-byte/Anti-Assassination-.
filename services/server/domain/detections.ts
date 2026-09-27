@@ -7,12 +7,15 @@ import { InferencePipeline } from '../../vision/inference-pipeline';
 import type { DetectionResult } from '../../vision/video-stream-manager';
 import type { RiskModel } from './risk';
 import type { RiskLevel } from '../../threat/risk-engine';
+import type { Tri } from '../i18n/types';
 
 export interface Detection {
-  id: string; label: string; source: string; confidence: number; observed_at: string;
+  id: string; label: Tri; source: string; confidence: number; observed_at: string;
   lat: number; lon: number; severity: RiskLevel; radius_m: number;
   status: 'pending' | 'confirmed' | 'rejected'; decided_by?: string; incident_id?: string;
 }
+
+export class DetectionError extends Error { constructor(public code: string, message: string) { super(message); } }
 
 export class DetectionService extends EventEmitter {
   private items = new Map<string, Detection>();
@@ -29,11 +32,11 @@ export class DetectionService extends EventEmitter {
 
   decide(id: string, decision: 'confirm' | 'reject', by: string): Detection {
     const d = this.items.get(id);
-    if (!d) throw new Error(`detection not found: ${id}`);
-    if (d.status !== 'pending') throw new Error(`detection ${id} already ${d.status}`);
+    if (!d) throw new DetectionError('detection_not_found', `detection not found: ${id}`);
+    if (d.status !== 'pending') throw new DetectionError('already_decided', `detection ${id} already ${d.status}`);
     let next: Detection = { ...d, status: decision === 'confirm' ? 'confirmed' : 'rejected', decided_by: by };
     if (decision === 'confirm') {
-      const inc = this.risk.add({ type: d.label, severity: d.severity, location: { lat: d.lat, lon: d.lon }, radius_m: d.radius_m, confidence: d.confidence, evidence: [d.source, `detection:${d.id}`], source: 'human_validated', human_validation_status: 'confirmed' });
+      const inc = this.risk.add({ type: d.label.en, severity: d.severity, location: { lat: d.lat, lon: d.lon }, radius_m: d.radius_m, confidence: d.confidence, evidence: [d.source, `detection:${d.id}`], source: 'human_validated', human_validation_status: 'confirmed' });
       next = { ...next, incident_id: inc.incident_id };
     }
     this.items.set(id, next);

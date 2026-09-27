@@ -10,6 +10,8 @@ export interface GatewayConfig {
   /** Validates the handshake token (socket.handshake.auth.token); return claims to accept or null to reject. */
   authenticate?: (token: string | undefined) => unknown | null;
   onConnection?: (socket: Socket) => void;
+  /** Decides whether a socket may join a room via `subscribe`; without it every room is allowed. */
+  authorizeRoom?: (socket: Socket, room: string) => boolean;
 }
 
 export class WebSocketGateway {
@@ -35,7 +37,10 @@ export class WebSocketGateway {
     this.io.on('connection', (socket: Socket) => {
       this.clientCount++;
       socket.on('disconnect', () => this.clientCount--);
-      socket.on('subscribe', (rooms: string[]) => { for (const room of rooms) socket.join(room); });
+      socket.on('subscribe', (rooms: unknown) => {
+        if (!Array.isArray(rooms)) return;
+        for (const room of rooms) if (typeof room === 'string' && (!config.authorizeRoom || config.authorizeRoom(socket, room))) socket.join(room);
+      });
       config.onConnection?.(socket);
     });
   }

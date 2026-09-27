@@ -1,33 +1,56 @@
 {
   "id": "s3",
-  "name": "قطع کامل ارتباط تیم",
-  "category": "ارتباطات",
-  "difficulty": "متوسط",
+  "name": {
+    "dr": "قطع کامل مخابره با تیم",
+    "ps": "له ټیم سره د اړیکې بشپړ پرې کېدل",
+    "en": "Complete loss of team comms"
+  },
+  "category": {
+    "dr": "مخابرات",
+    "ps": "مخابرات",
+    "en": "Communications"
+  },
+  "difficulty": "medium",
   "nominal_minutes": 12,
-  "description": "آزمون بافر آفلاین و همگام‌سازی پس از اتصال.",
+  "description": {
+    "dr": "آزمون بافر آفلاین و همگام‌سازی پس از وصل مجدد.",
+    "ps": "د آفلاین بفر او له بیا نښلېدو وروسته د همغږۍ ازموینه.",
+    "en": "Test of the offline buffer and resync after reconnection."
+  },
+  "duration_ms": 45000,
+  "loop": false,
   "metrics": {
-    "detection_time": "۱۵ ثانیه",
-    "ack_time": "۴۰ ثانیه",
-    "protocol_compliance": "۸۹٪",
-    "route_decision": "نگه‌داشت موقعیت"
+    "detection_s": 15,
+    "ack_s": 40,
+    "compliance_pct": 89,
+    "route_decision": {
+      "dr": "حفظ موقعیت",
+      "ps": "د موقعیت ساتل",
+      "en": "Hold position"
+    }
   },
   "steps": [
     {
       "time_offset_ms": 2250,
-      "events": [
-        {
-          "message": "آخرین سیگنال تیم چارلی",
-          "level": "warning"
-        }
-      ],
       "positions": [
         {
           "source_id": "charlie",
-          "lat": 35.681115,
-          "lon": 51.396742,
+          "at": {
+            "unit": "charlie"
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 1
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "آخرین سگنال تیم چارلی",
+            "ps": "د چارلي ټیم وروستی سیګنال",
+            "en": "Last signal from team Charlie"
+          },
+          "level": "warning"
         }
       ]
     },
@@ -35,7 +58,11 @@
       "time_offset_ms": 9000,
       "events": [
         {
-          "message": "قطع ارتباط تیم چارلی · بافر محلی فعال",
+          "message": {
+            "dr": "قطع مخابره با تیم چارلی · بافر محلی فعال",
+            "ps": "له چارلي ټیم سره اړیکه پرې شوه · محلي بفر فعال",
+            "en": "Team Charlie comms lost · local buffer active"
+          },
           "level": "error"
         }
       ],
@@ -43,7 +70,11 @@
         {
           "type": "comms_loss",
           "severity": "high",
-          "message": "قطع ارتباط تیم چارلی"
+          "message": {
+            "dr": "قطع مخابره با تیم چارلی",
+            "ps": "له چارلي ټیم سره اړیکه پرې شوه",
+            "en": "Team Charlie comms lost"
+          }
         }
       ]
     },
@@ -51,27 +82,37 @@
       "time_offset_ms": 24750,
       "events": [
         {
-          "message": "اعزام پهپاد D-01 برای رله ارتباطی",
+          "message": {
+            "dr": "اعزام درون D-01 به حیث رلهٔ مخابراتی",
+            "ps": "D-01 ډرون د مخابراتي ریلې په توګه ولېږل شو",
+            "en": "Drone D-01 dispatched as a comms relay"
+          },
           "level": "info"
         }
       ]
     },
     {
       "time_offset_ms": 33750,
-      "events": [
-        {
-          "message": "اتصال مجدد · ۱۲۴ پاکت بدون تکرار همگام شد",
-          "level": "info"
-        }
-      ],
       "positions": [
         {
           "source_id": "charlie",
-          "lat": 35.681295,
-          "lon": 51.397406,
+          "at": {
+            "unit": "charlie",
+            "east_m": 40
+          },
           "accuracy_m": 3,
           "confidence": 0.95,
           "speed_mps": 1
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "وصل مجدد · ۱۲۴ بسته بدون تکرار همگام شد",
+            "ps": "بیا نښلېدل · ۱۲۴ کڅوړې پرته له تکرار همغږې شوې",
+            "en": "Reconnected · 124 packets resynced without duplicates"
+          },
+          "level": "info"
         }
       ]
     },
@@ -79,16 +120,14 @@
       "time_offset_ms": 44550,
       "events": [
         {
-          "message": "پایان سناریو",
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
           "level": "info"
         }
       ]
     }
-  ],
-  "duration_ms": 45000,
-  "loop": false,
-  "center": {
-    "lat": 35.6892,
-    "lon": 51.389
-  }
+  ]
 }

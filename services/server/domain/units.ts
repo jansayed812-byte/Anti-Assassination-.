@@ -4,20 +4,22 @@
  * is what gets published — position, CEP95, source mix and risk at that position.
  */
 import { FusionOrchestrator } from '../../fusion/fusion-orchestrator';
-import { alongPolyline, bearingDeg, distanceM, polylineLengthM, toLatLon, ORIGIN, type LatLon } from '../geo';
-import type { RiskModel } from './risk';
+import { alongPolyline, bearingDeg, distanceM, offset, polylineLengthM, type LatLon } from '../geo';
+import type { Tri } from '../i18n/types';
+import { levelOf, type RiskModel } from './risk';
 import type { RiskLevel } from '../../threat/risk-engine';
 
 export type SourceKind = 'gnss' | 'wifi' | 'ble' | 'cellular';
 
 export interface UnitMeta {
-  id: string; name: string; icon: string; group: 'mission' | 'standby'; sub: string; mission: string | null;
-  sources: SourceKind[]; comms: 'ok' | 'lost';
+  id: string; name: Tri; icon: string; group: 'mission' | 'standby'; sub: Tri; mission: string | null;
+  sources: SourceKind[]; comms: 'ok' | 'lost'; start: LatLon; alt_m: number; device?: string;
 }
+export type FusionMode = 'fused' | 'gnss' | 'dead_reckoning';
 
 export interface UnitTelemetry {
   id: string; lat: number; lon: number; alt_m: number; speed_kmh: number; heading_deg: number; accel_mps2: number;
-  cep95_m: number; confidence: number; degraded: boolean; mode: string;
+  cep95_m: number; confidence: number; degraded: boolean; mode: FusionMode;
   fusion: Array<{ source: string; share: number }>; risk_score: number; risk_level: RiskLevel;
   route?: string; route_progress?: number;
 }
@@ -74,13 +76,11 @@ export class UnitTracker {
   private t0 = Date.now();
   private alphaRoute: { key: string; path: LatLon[] } | null = null;
 
-  constructor(private risk: RiskModel, private routeFor: () => { key: string; path: LatLon[] } | undefined, units: UnitMeta[]) {
-    const start: Record<string, [number, number, number]> = { alpha: [-85, 75, 1210], drone: [-70, 60, 1650], bravo: [-40, -30, 1215], charlie: [35, 45, 1205] };
+  constructor(private risk: RiskModel, private routeFor: () => { key: string; path: LatLon[] } | undefined, units: UnitMeta[], reference: LatLon & { alt_m: number }) {
     for (const meta of units) {
-      const s = start[meta.id] ?? [0, 0, 1200];
       this.tracks.set(meta.id, {
-        meta, fusion: new FusionOrchestrator({ enuReference: { reference_latitude: ORIGIN.lat, reference_longitude: ORIGIN.lon, reference_altitude_m: 1200 }, updateRateHz: 5 }),
-        truth: toLatLon([s[0], s[1]]), alt: s[2], hist: [], speed: 0, heading: 0, accel: 0, window: [],
+        meta, fusion: new FusionOrchestrator({ enuReference: { reference_latitude: reference.lat, reference_longitude: reference.lon, reference_altitude_m: reference.alt_m }, updateRateHz: 5 }),
+        truth: meta.start, alt: meta.alt_m, hist: [], speed: 0, heading: 0, accel: 0, window: [],
       });
     }
   }
@@ -113,7 +113,7 @@ export class UnitTracker {
       drone.truth = { lat: alpha.truth.lat + (280 * Math.sin(a)) / 111_320, lon: alpha.truth.lon + (280 * Math.cos(a)) / (111_320 * Math.cos((alpha.truth.lat * Math.PI) / 180)) };
     }
     const charlie = this.tracks.get('charlie');
-    if (charlie) charlie.truth = toLatLon([35 + 2.5 * Math.sin((now - this.t0) / 3300), 45]);
+    if (charlie) charlie.truth = offset(charlie.meta.start, 50 * Math.sin((now - this.t0) / 3300), 0);
 
     const out: UnitTelemetry[] = [];
     for (const t of this.tracks.values()) {
@@ -138,14 +138,14 @@ export class UnitTracker {
       for (const w of t.window) for (const k of w) counts.set(k, (counts.get(k) ?? 0) + 1);
       const total = [...counts.values()].reduce((s, n) => s + n, 0) || 1;
       const kinds = [...counts.keys()];
-      const r = this.risk.assess(p, 0, `unit:${t.meta.id}`);
+      const score = this.risk.scoreAt(p);
       t.last = {
         id: t.meta.id, lat: +p.lat.toFixed(6), lon: +p.lon.toFixed(6), alt_m: Math.round(t.alt),
         speed_kmh: Math.round(t.speed * 3.6), heading_deg: Math.round(t.heading), accel_mps2: t.accel,
         cep95_m: +(2.45 * fused.accuracy.uncertainty_m).toFixed(1), confidence: +fused.confidence.toFixed(2), degraded: fused.isDegraded,
-        mode: kinds.includes('gnss') ? (kinds.length > 1 ? 'تلفیق کامل' : 'GNSS') : 'Dead-reckoning',
+        mode: kinds.includes('gnss') ? (kinds.length > 1 ? 'fused' : 'gnss') : 'dead_reckoning',
         fusion: t.meta.sources.map((k) => ({ source: LABEL[k], share: Math.round(((counts.get(k) ?? 0) / total) * 100) })),
-        risk_score: r.score, risk_level: r.level,
+        risk_score: score, risk_level: levelOf(score),
         ...(t.meta.id === 'alpha' && route ? { route: route.key, route_progress: progressOn(route.path, t.truth) } : {}),
       };
       out.push(t.last);

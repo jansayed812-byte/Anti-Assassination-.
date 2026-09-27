@@ -6,7 +6,11 @@ import { createHash, createHmac } from 'crypto';
 
 export type Role = 'viewer' | 'operator' | 'analyst' | 'planner' | 'commander' | 'technical' | 'admin';
 
-export interface JWTClaims { sub: string; name: string; role: Role; exp: number; iat: number; }
+/**
+ * `branch` is the active branch the token acts in (role = the user's role there); `branches` lists every branch the
+ * user may read (regional staff: all of them). Tokens without branch claims act in the default branch.
+ */
+export interface JWTClaims { sub: string; name: string; role: Role; exp: number; iat: number; branch?: string; branches?: string[]; scope?: 'branch' | 'regional' }
 export interface AuditEntry { user_id: string; action: string; resource: string; ip: string; at: string; result: 'allow' | 'deny'; chain_hash: string; }
 
 const READ = ['read:positions', 'read:incidents', 'read:alerts', 'read:plans', 'read:scenarios', 'read:devices', 'read:admin'];
@@ -45,7 +49,10 @@ function appendAudit(entry: Omit<AuditEntry, 'chain_hash'>): void {
 }
 
 const rateLimits = new Map<string, { count: number; reset: number }>();
-function checkRateLimit(ip: string, maxRpm = 120): boolean {
+let RATE_LIMIT_RPM = 120;
+/** Requests per minute allowed per client IP on permission-checked routes. */
+export function setRateLimit(rpm: number): void { if (rpm > 0) RATE_LIMIT_RPM = rpm; }
+function checkRateLimit(ip: string, maxRpm = RATE_LIMIT_RPM): boolean {
   const now = Date.now();
   const entry = rateLimits.get(ip);
   if (!entry || now > entry.reset) { rateLimits.set(ip, { count: 1, reset: now + 60_000 }); return true; }
@@ -72,6 +79,34 @@ export function requirePermission(permission: string) {
     const allowed = hasPermission(user.role, permission);
     appendAudit({ user_id: user.sub, action: permission, resource: req.path, ip, at: new Date().toISOString(), result: allowed ? 'allow' : 'deny' });
     if (!allowed) { res.status(403).json({ error: `Permission denied: ${permission}` }); return; }
+    next();
+  };
+}
+
+/**
+ * Resolves the branch a request acts on — `:branch` route param, `X-Branch` header or `?branch=` — and attaches
+ * its context as `req.ctx`. Unknown branch → 404; a branch outside the token's readable set → 403. Reading
+ * another branch than the token's active one is allowed for readable branches but with the `viewer` role, so
+ * every write there is refused by `requirePermission` (switch branch to act in it).
+ */
+export function branchScope<T>(lookup: (id: string) => T | undefined, defaultBranch: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = (req as any).user as JWTClaims | undefined;
+    if (!user) { res.status(401).json({ error: 'Unauthenticated' }); return; }
+    const active = user.branch ?? defaultBranch;
+    const q = req.query.branch;
+    const requested = req.params.branch || req.header('x-branch') || (typeof q === 'string' ? q : '') || active;
+    const ctx = lookup(requested);
+    if (!ctx) { res.status(404).json({ error: `unknown branch: ${requested}`, code: 'branch_not_found' }); return; }
+    if (requested !== active) {
+      if (!(user.branches ?? [active]).includes(requested)) {
+        appendAudit({ user_id: user.sub, action: 'read:branch', resource: requested, ip: req.ip ?? 'unknown', at: new Date().toISOString(), result: 'deny' });
+        res.status(403).json({ error: `no access to branch ${requested}`, code: 'branch_forbidden' }); return;
+      }
+      (req as any).user = { ...user, role: 'viewer' as Role };
+    }
+    (req as any).branch = requested;
+    (req as any).ctx = ctx;
     next();
   };
 }

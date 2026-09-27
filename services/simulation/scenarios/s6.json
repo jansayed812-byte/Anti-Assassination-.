@@ -1,22 +1,44 @@
 {
   "id": "s6",
-  "name": "تهدید پهپادی",
-  "category": "هوایی",
-  "difficulty": "سخت",
+  "name": {
+    "dr": "تهدید درون",
+    "ps": "د ډرون ګواښ",
+    "en": "Hostile drone"
+  },
+  "category": {
+    "dr": "هوایی",
+    "ps": "هوايي",
+    "en": "Air"
+  },
+  "difficulty": "hard",
   "nominal_minutes": 10,
-  "description": "رهگیری پهپاد ناشناس و واکنش تیم.",
+  "description": {
+    "dr": "تعقیب درون ناشناس و عکس‌العمل تیم.",
+    "ps": "د نامعلوم ډرون تعقیب او د ټیم غبرګون.",
+    "en": "Track an unknown drone and the team's response."
+  },
+  "duration_ms": 45000,
+  "loop": false,
   "metrics": {
-    "detection_time": "۲۸ ثانیه",
-    "ack_time": "۲۰ ثانیه",
-    "protocol_compliance": "۹۰٪",
-    "route_decision": "توقف و پوشش"
+    "detection_s": 28,
+    "ack_s": 20,
+    "compliance_pct": 90,
+    "route_decision": {
+      "dr": "توقف و پوشش",
+      "ps": "درېدل او پټنځای",
+      "en": "Halt and take cover"
+    }
   },
   "steps": [
     {
       "time_offset_ms": 4500,
       "events": [
         {
-          "message": "ردیابی رادیویی پهپاد ناشناس",
+          "message": {
+            "dr": "ردیابی رادیویی درون ناشناس",
+            "ps": "د نامعلوم ډرون راډیويي تعقیب",
+            "en": "Radio tracking of an unknown drone"
+          },
           "level": "warning"
         }
       ]
@@ -25,7 +47,11 @@
       "time_offset_ms": 12600,
       "events": [
         {
-          "message": "پهپاد ناشناس در ۳۰۰ متری کاروان",
+          "message": {
+            "dr": "درون ناشناس در ۳۰۰ متری کاروان",
+            "ps": "نامعلوم ډرون د کاروان په ۳۰۰ مترۍ کې",
+            "en": "Unknown drone 300 m from the convoy"
+          },
           "level": "critical"
         }
       ],
@@ -33,13 +59,14 @@
         {
           "type": "hostile_drone",
           "severity": "critical",
-          "lat": 35.6892,
-          "lon": 51.391212,
+          "at": {
+            "unit": "alpha",
+            "north_m": 300
+          },
           "radius_m": 300,
           "confidence": 0.85,
           "evidence": [
-            "rf_scan",
-            "drone_video"
+            "rf_scanner"
           ]
         }
       ],
@@ -47,7 +74,11 @@
         {
           "type": "hostile_uav",
           "severity": "critical",
-          "message": "پهپاد ناشناس نزدیک کاروان"
+          "message": {
+            "dr": "درون ناشناس نزدیک کاروان",
+            "ps": "کاروان ته نږدې نامعلوم ډرون",
+            "en": "Unknown drone near the convoy"
+          }
         }
       ]
     },
@@ -55,7 +86,11 @@
       "time_offset_ms": 22500,
       "events": [
         {
-          "message": "اختلال‌گر فعال شد",
+          "message": {
+            "dr": "مختل‌کننده فعال شد",
+            "ps": "ګډوډوونکی فعال شو",
+            "en": "Jammer activated"
+          },
           "level": "info"
         }
       ]
@@ -64,7 +99,11 @@
       "time_offset_ms": 32400,
       "events": [
         {
-          "message": "پهپاد از منطقه خارج شد",
+          "message": {
+            "dr": "درون از ساحه خارج شد",
+            "ps": "ډرون له سیمې ووت",
+            "en": "Drone left the area"
+          },
           "level": "info"
         }
       ]
@@ -73,16 +112,14 @@
       "time_offset_ms": 44550,
       "events": [
         {
-          "message": "پایان سناریو",
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
           "level": "info"
         }
       ]
     }
-  ],
-  "duration_ms": 45000,
-  "loop": false,
-  "center": {
-    "lat": 35.6892,
-    "lon": 51.389
-  }
+  ]
 }
