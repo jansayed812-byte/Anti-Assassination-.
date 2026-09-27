@@ -3,7 +3,7 @@
  * تست‌های یکپارچگی برای Message Bus و Event Contract
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { NatsService } from '../../services/comms/nats-service';
 import { EdgeCollector } from '../../services/comms/edge-collector';
 import { EventFactory, BaseEvent, isValidBaseEvent } from '../../services/comms/event-contracts';

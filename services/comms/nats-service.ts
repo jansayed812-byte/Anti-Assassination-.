@@ -1,7 +1,11 @@
 /**
  * NATS JetStream Service
  */
-import { connect, NatsConnection, JetStreamClient } from 'nats';
+import {
+  connect, consumerOpts, createInbox, nanos,
+  AckPolicy, DeliverPolicy, DiscardPolicy, RetentionPolicy, StorageType,
+  NatsConnection, JetStreamClient, JetStreamManager,
+} from 'nats';
 import { BaseEvent, isValidBaseEvent } from './event-contracts';
 
 interface NatsConfig {
@@ -14,6 +18,7 @@ interface NatsConfig {
 export class NatsService {
   private nc!: NatsConnection;
   private js!: JetStreamClient;
+  private jsm!: JetStreamManager;
   private config: NatsConfig;
   private isConnected = false;
 
@@ -35,6 +40,7 @@ export class NatsService {
         timeout: this.config.timeout
       });
       this.js = this.nc.jetstream();
+      this.jsm = await this.nc.jetstreamManager();
       this.isConnected = true;
       console.log('✓ NATS connected');
     } catch (error) {
@@ -60,7 +66,7 @@ export class NatsService {
     ];
     for (const stream of streams) {
       try {
-        await this.js.streams.add({ name: stream.name, subjects: stream.subjects, max_age: stream.maxAge, storage: 'file', discard: 'old', retention: 'limits' });
+        await this.jsm.streams.add({ name: stream.name, subjects: stream.subjects, max_age: nanos(stream.maxAge), storage: StorageType.File, discard: DiscardPolicy.Old, retention: RetentionPolicy.Limits });
       } catch (error: any) {
         if (!error.message?.includes('STREAM_EXISTS')) throw error;
       }
@@ -74,7 +80,11 @@ export class NatsService {
   }
 
   async subscribe(subject: string, callback: (event: BaseEvent) => void): Promise<() => void> {
-    const sub = await this.js.subscribe(subject);
+    const opts = consumerOpts();
+    opts.deliverTo(createInbox());
+    opts.manualAck();
+    opts.ackExplicit();
+    const sub = await this.js.subscribe(subject, opts);
     (async () => {
       for await (const message of sub) {
         try {
@@ -88,7 +98,7 @@ export class NatsService {
 
   async createConsumer(streamName: string, consumerName: string, filterSubject?: string): Promise<void> {
     try {
-      await this.js.consumers.add(streamName, { name: consumerName, filter_subject: filterSubject, deliver_policy: 'all', ack_policy: 'explicit' });
+      await this.jsm.consumers.add(streamName, { durable_name: consumerName, filter_subject: filterSubject, deliver_policy: DeliverPolicy.All, ack_policy: AckPolicy.Explicit });
     } catch (error: any) {
       if (!error.message?.includes('CONSUMER_EXISTS')) throw error;
     }
@@ -123,10 +133,10 @@ export class NatsService {
 
   async getStreamStats(): Promise<Record<string, any>> {
     try {
-      const streams = await this.js.streams.list().next();
+      const streams = await this.jsm.streams.list().next();
       const stats: Record<string, any> = {};
       for (const stream of streams) {
-        const info = await this.js.streams.info(stream.config.name);
+        const info = await this.jsm.streams.info(stream.config.name);
         stats[stream.config.name] = { messages: info.state.messages, bytes: info.state.bytes };
       }
       return stats;

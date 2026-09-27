@@ -31,7 +31,7 @@ export class RiskEngine {
     let level: RiskLevel, color: string;
     if (score >= 0.6) { level = 'critical'; color = '#EF4444'; }
     else if (score >= 0.35) { level = 'high'; color = '#F97316'; }
-    else if (score >= 0.15) { level = 'medium'; color = '#EAB308'; }
+    else if (score >= 0.05) { level = 'medium'; color = '#EAB308'; }
     else { level = 'low'; color = '#22C55E'; }
     const provenance = `severity=${input.severity.toFixed(2)}, likelihood=${input.likelihood.toFixed(2)}, exposure=${input.exposure.toFixed(2)}, confidence=${input.data_confidence.toFixed(2)}, source=${input.source || 'unknown'}`;
     return { score: Math.round(score * 1000) / 1000, level, color, input, provenance, calculated_at: new Date().toISOString(), human_validated: false };

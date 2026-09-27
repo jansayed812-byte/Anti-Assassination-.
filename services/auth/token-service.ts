@@ -19,7 +19,8 @@ export class TokenService {
 
   issue(userId: string, name: string, role: Role): TokenPair {
     const now = Math.floor(Date.now() / 1000);
-    const access_token = this._signJWT({ sub: userId, name, role, iat: now, exp: now + this.accessTTL });
+    const jti = randomBytes(8).toString('hex');
+    const access_token = this._signJWT({ sub: userId, name, role, iat: now, exp: now + this.accessTTL, jti });
     const refresh_token = randomBytes(32).toString('hex');
     this.refreshStore.set(refresh_token, { userId, role, expires: now + this.refreshTTL });
     return { access_token, refresh_token, expires_in: this.accessTTL, token_type: 'Bearer' };

@@ -170,9 +170,10 @@ export class EventFactory {
     const now = new Date().toISOString();
     const riskScore = severity * likelihood * exposure * dataConfidence;
     let riskLevel: 'low' | 'medium' | 'high' | 'critical';
-    if (riskScore >= 0.75) riskLevel = 'critical';
-    else if (riskScore >= 0.5) riskLevel = 'high';
-    else if (riskScore >= 0.25) riskLevel = 'medium';
+    // Keep in sync with RiskEngine.calculate thresholds (services/threat/risk-engine.ts)
+    if (riskScore >= 0.6) riskLevel = 'critical';
+    else if (riskScore >= 0.35) riskLevel = 'high';
+    else if (riskScore >= 0.05) riskLevel = 'medium';
     else riskLevel = 'low';
     return {
       event_id: this.generateUUID(),
