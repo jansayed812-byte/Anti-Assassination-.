@@ -59,6 +59,15 @@ const M = {
   'res.drone': tri('درون {id}', 'ډرون {id}', 'Drone {id}'),
   'res.medical': tri('{name} روی مسیر', 'په لاره کې {name}', '{name} on route'),
 
+  // area recommendations (intel/spatial-analysis)
+  'area.safe': tri('ساحه امن است — خطری تشخیص نشد', 'سیمه خوندي ده — هېڅ خطر ونه موندل شو', 'Area clear — no threat detected'),
+  'area.evacuate': tri('تخلیهٔ فوری توصیه می‌شود', 'سمدستي وتل وړاندیز کېږي', 'Immediate evacuation recommended'),
+  'area.qrf': tri('با تیم عکس‌العمل سریع تماس بگیرید', 'له چټک غبرګون ټیم سره اړیکه ونیسئ', 'Contact the quick reaction force'),
+  'area.readiness': tri('آماده‌باش تیم‌ها را بلند ببرید', 'د ټیمونو چمتووالی لوړ کړئ', 'Raise team readiness'),
+  'area.caution': tri('از این ساحه با احتیاط عبور کنید', 'له دې سیمې څخه په احتیاط تېر شئ', 'Transit the area with caution'),
+  'area.watch': tri('نظارت دوامدار توصیه می‌شود', 'دوامداره څارنه وړاندیز کېږي', 'Continuous monitoring recommended'),
+  'area.types': tri('رویدادهای تشخیص‌شده: {types}', 'پېژندل شوې پېښې: {types}', 'Detected incidents: {types}'),
+
   // plans
   'plan.tbd': tri('تعیین نشده', 'نه دی ټاکل شوی', 'Not scheduled'),
 

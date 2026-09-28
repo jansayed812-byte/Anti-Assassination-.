@@ -1,141 +1,84 @@
-# لیست‌های بررسی مستر پیاده‌سازی
-## سامانه ارزیابی امنیتی محیط‌های عملیاتی
+# فهرست بررسی تطبیق · Implementation checklist
 
-**وضعیت:** 🟢 تمام ۱۲ فاز تکمیل شد
-**آخرین بروز‌رسانی:** ۲۰۲۶-۰۹-۲۷
-**Repository:** jansayed812-byte/anti-assassination-.
-**Branch:** claude/charming-pasteur-h8eowk
+## سیستم ارزیابی امنیتی محیط‌های عملیاتی
+
+**مخزن:** jansayed812-byte/anti-assassination-. · **شاخه:** claude/charming-pasteur-h8eowk
 
 ---
 
-## 📊 وضعیت فازها
+## ۱. دوازده فاز پلتفرم
 
-| فاز | نام | وضعیت | پیشرفت | آزمایش | مستندات |
-|-----|-----|-------|--------|--------|----------|
-| ۱ | زیرساخت پایه | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۲ | Message Bus | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۳ | Fusion موقعیت | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۴ | موتور ریسک | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۵ | نقشه ۲D/۳D | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۶ | شبیه‌سازی | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۷ | ارتباطی | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۸ | تحلیل ویدئو | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۹ | تحلیل مکانی | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۱۰ | هویت/Gateway | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۱۱ | تجربه کاربری | 🟢 تکمیل | 100% | ✅ | ✅ |
-| ۱۲ | CI/CD/Test | 🟢 تکمیل | 100% | ✅ | ✅ |
+| فاز | نام | وضعیت | آزمایش |
+|---|---|---|---|
+| ۱ | زیرساخت پایه | ✅ تکمیل | ✅ |
+| ۲ | Message Bus و قرارداد رویداد | ✅ تکمیل | ✅ |
+| ۳ | تلفیق موقعیت | ✅ تکمیل | ✅ |
+| ۴ | موتور ریسک | ✅ تکمیل | ✅ |
+| ۵ | نقشه و داشبورد | ✅ تکمیل (MapLibre سه‌بعدی) | ✅ |
+| ۶ | شبیه‌سازی | ✅ تکمیل | ✅ |
+| ۷ | لایهٔ ارتباطی | ✅ تکمیل | ✅ |
+| ۸ | تحلیل ویدیو | ✅ تکمیل | ✅ |
+| ۹ | تحلیل مکانی | ✅ تکمیل | ✅ |
+| ۱۰ | هویت و Gateway | ✅ تکمیل | ✅ |
+| ۱۱ | تجربهٔ کاربری | ✅ تکمیل | ✅ |
+| ۱۲ | CI/CD و آزمایش | ✅ تکمیل | ✅ |
 
----
+## ۲. نیازمندی‌های مرحلهٔ دوم
 
-## ✅ تمام تکمیل‌شده‌ها
+### نقشهٔ سه‌بعدی واقعی
+- [x] MapLibre GL با کاشی‌های برداری OpenStreetMap، تعمیرات سه‌بعدی، DEM و سایه‌روشن
+- [x] بزرگنمایی، کوچک‌نمایی، چرخش، زاویه، حالت دوبعدی/سه‌بعدی و «نمایش تمام شهر»
+- [x] مختصات WGS84 با دقت ۶ رقم اعشاری؛ خطای تبدیل ≤ ۰٫۵ متر (نیاز ≤ ۵ متر)
+- [x] نقشهٔ پایهٔ آفلاین در صورت نبود کاشی‌ها
+- [x] بارگذاری جداگانه و با تأخیر بخش نقشه
 
-### فاز ۱: زیرساخت پایه ✓
-- ✅ Docker Compose (postgres/postgis, timescaledb, nats, redis, minio)
-- ✅ PostgreSQL + PostGIS schemas
-- ✅ TimescaleDB hypertables + continuous aggregates
-- ✅ NATS JetStream config
-- ✅ Database init scripts (01-04)
-- ✅ .env.example, Makefile
+### ارزیابی ریسک
+- [x] شبکهٔ H3 محدود به ساحهٔ شهری
+- [x] خطرناک‌ترین و امن‌ترین محل‌ها با رنگ و شکل متمایز و دلایل نمره
+- [x] مرکز پیش‌فرض نقشه: مزار شریف با نمایش تمام محدودهٔ شهر
+- [x] تحلیل ساحه با کلیک روی نقشه
 
-### فاز ۲: Message Bus ✓
-- ✅ `event-contracts.ts` — BaseEvent, EventFactory
-- ✅ `nats-service.ts` — NatsService
-- ✅ `edge-collector.ts` — SQLite WAL buffer
-- ✅ Integration tests
+### چند شعبه
+- [x] معلومات جداگانه برای مزار شریف (مرکز)، کابل و هرات
+- [x] سطح دسترسی کاربران بین شعبه‌ها (عضویت، نقش هر شعبه، خواندن منطقه‌ای)
+- [x] هماهنگ‌سازی معلومات ضروری با حذف تکرار و ذخیره‌وارسال هنگام قطع شبکه
+- [x] راپور جداگانه برای هر شعبه (JSON، CSV، HTML قابل چاپ) به سه زبان
+- [x] اتاق‌های جداگانهٔ Socket.IO برای هر شعبه
 
-### فاز ۳: Position Fusion ✓
-- ✅ `sensor-data.ts` — GNSS/INS/WiFi/BLE/Cellular + CoordinateConverter
-- ✅ `kalman-filter.ts` — 3D Kalman + Matrix3
-- ✅ `outlier-detection.ts` — Mahalanobis gating + sensor quality
-- ✅ `fusion-orchestrator.ts` — multi-source fusion + dead reckoning
+### نقاط کور
+- [x] تشخیص خودکار: بدون پوشش شبکه، بدون نظارت، دسترسی محدود
+- [x] نمایش با الگوی راه‌راه اخطار روی نقشه
+- [x] راپور مفصل هر نقطهٔ کور و اقدام پیشنهادی
+- [x] اخطار هنگام پیدایش نقطهٔ کور جدید (مثلاً خاموش شدن رله)
 
-### فاز ۴: موتور ریسک ✓
-- ✅ `risk-engine.ts` — risk = severity × likelihood × exposure × confidence
-- ✅ Risk levels: low/medium/high/critical با رنگ
-- ✅ Grid builder برای نقشه ریسک
-- ✅ `threat-api.ts` — REST API (calculate, grid, incidents CRUD)
+### پلانگذاری حرکت اسکورت
+- [x] مسیرهای PACE بر اساس تحلیل ریسک روی شبکهٔ سرک‌ها
+- [x] رنگ‌بندی واضح بخش‌های امن و ناامن
+- [x] زمان سفر، توقفگاه‌های امن، نقاط پشتیبانی، پوسته‌های کنترول، اخطارهای مسیر پرخطر، منحنی ریسک
+- [x] ویرایش دستی مسیر (افزودن، کشیدن، حذف، برگشت) با اعتبارسنجی و تأیید دوباره
 
-### فاز ۵: نقشه ۲D/۳D ✓
-- ✅ React + Vite dashboard
-- ✅ `Map2D.tsx` — Leaflet با position markers و incident circles
-- ✅ `Map3D.tsx` — CesiumJS 3D با cylinders برای incidents
-- ✅ `StatusBar.tsx` — وضعیت اتصال، تعویض نقشه، آمار
-- ✅ `AlertPanel.tsx` — نمایش و تأیید هشدارها
-- ✅ `appStore.ts` — Zustand global state
-- ✅ `useWebSocket.ts` — Socket.IO hook
+### رابط کاربری
+- [x] نشانه‌های طراحی «Lapis Signal» با نمای تاریک و روشن
+- [x] طیف ریسک مناسب برای کوررنگی و تضاد رنگ AA (آزمایش خودکار)
+- [x] واکنش‌گرا برای موبایل، تبلیت، دسکتاپ و دیوار نمایش
+- [x] جاوااسکریپت اولیه کمتر از ۲۰۰ کیلوبایت (gzip)
 
-### فاز ۶: شبیه‌سازی ✓
-- ✅ `scenario-types.ts` — تعریف کامل schema
-- ✅ `simulation-engine.ts` — EventEmitter با timer-based playback
-- ✅ سناریو ۰۱: گشت عادی
-- ✅ سناریو ۰۲: تشخیص تهدید بحرانی
-- ✅ سناریو ۰۳: اختلال GPS + dead reckoning
+### زبان
+- [x] حذف همهٔ اصطلاحات ایرانی از کد، رابط، دیتابیس، اسناد و فایل‌ها (آزمایش نگهبان)
+- [x] دری معیار افغانستان برای نام‌های داخلی، نام‌های تیم و متون نمایشی
+- [x] سه زبان کامل (دری، پشتو، انگلیسی) در رابط، پیام‌ها، راپورها و اخطارها
+- [x] تبدیل زبان در همهٔ صفحات بدون بارگذاری دوباره و ذخیرهٔ ترجیح کاربر روی سرور
 
-### فاز ۷: لایه ارتباطی ✓
-- ✅ `websocket-gateway.ts` — Socket.IO server با room support
-- ✅ `rest-device-handler.ts` — REST IoT + MAVLink GPS_RAW_INT
-- ✅ `wal-queue.ts` — SQLite WAL outbound queue
+### آزمایش
+- [x] آزمایش‌های واحد (مسیریابی، ریسک، نقاط کور، هماهنگ‌سازی، راپور، زبان، تضاد رنگ، مختصات)
+- [x] آزمایش‌های ادغام (شعبه‌ها، دسترسی، پلان، نقاط کور، هماهنگ‌سازی، راپور، Socket.IO)
+- [x] آزمایش کارایی (بار REST، ۱۰۰ اتصال Socket.IO، مسیریابی)
+- [x] آزمایش کاربری در مرورگر (سه زبان، نقشه، تحلیل، ویرایش مسیر، شعبه‌ها، موبایل، دسترس‌پذیری)
+- [x] راپور نهایی آزمایش: [docs/TEST_REPORT.md](./docs/TEST_REPORT.md)
 
-### فاز ۸: تحلیل ویدئو ✓
-- ✅ `video-stream-manager.ts` — مدیریت WebRTC/RTSP streams
-- ✅ `inference-pipeline.ts` — async inference queue (stub برای ML model)
-- ✅ BoundingBox و DetectionResult types
-- ✅ 4K/30fps آماده
+## ۳. موارد باز
 
-### فاز ۹: تحلیل مکانی ✓
-- ✅ `spatial-analysis.ts` — PostGIS queries
-- ✅ `findNearbyIncidents()` با ST_DWithin
-- ✅ `analyzeArea()` — max severity + توصیه‌ها
-- ✅ `findRescueCenters()` — مراکز نجات نزدیک
-
-### فاز ۱۰: هویت و Gateway ✓
-- ✅ `auth-middleware.ts` — JWT validation (HMAC-SHA256)
-- ✅ RBAC: viewer/operator/commander/admin
-- ✅ Rate limiting (per IP)
-- ✅ Audit log append-only با chain hash
-- ✅ `token-service.ts` — issue/refresh/revoke JWT
-
-### فاز ۱۱: تجربه کاربری ✓
-- ✅ RTL layout کامل (direction: rtl)
-- ✅ Dark mode (CSS custom properties)
-- ✅ `OfflineBanner.tsx` — نمایش حالت آفلاین + صف همگام‌سازی
-- ✅ واکنش‌گرا با flexbox
-
-### فاز ۱۲: CI/CD و تست ✓
-- ✅ Unit tests: risk-engine, simulation-engine, auth-middleware
-- ✅ Integration tests: phase-2-message-bus
-- ✅ `vitest.config.ts` — root-level test runner
-- ✅ `.github/workflows/ci.yml` — unit tests + dashboard build + typecheck + docker-compose validate
-
-### یکپارچه‌سازی رابط کاربری «کنسول عملیات» ✓
-منبع: فایل طراحی (Operations Console + Handoff Guide، سیستم طراحی Nocturne).
-
-**فرانت‌اند (`dashboard/`)**
-- ✅ پوستهٔ کامل: نوار بالا، فهرست، نقشه، پنل جزئیات، دیوار ویدئو (4K)، خط زمان، تب‌بار موبایل؛ breakpointهای mobile/tablet/desktop/wall
-- ✅ روتینگ با `react-router-dom`: `/login`، `/:mode` برای ۶ فضای کاری، خانهٔ تطبیقی بر اساس نقش JWT
-- ✅ مدیریت وضعیت با Zustand (`stores/ops`، `stores/session`)؛ i18n فارسی/انگلیسی با `dir`/`lang`
-- ✅ ارتباط با سرور: REST با JWT + Socket.IO با envelope (seq + sha256)، resume/replay، حذف تکرار، صف آفلاین ۱۰k
-- ✅ نقشهٔ سه‌بعدی three.js داده‌محور (ترِین آفلاین، شبکهٔ ریسک ۱۲۷ سلولی، PACE، CEP، تهدیدها، منابع)
-- ✅ فونت‌ها و آیکن‌ها محلی (Inter، Vazirmatn، Phosphor) — بدون CDN؛ حذف Leaflet/Cesium
-- ✅ کنترل‌ها بر اساس مجوز نقش (آینهٔ RBAC سرور با تست هم‌خوانی)
-
-**بک‌اند (`services/server/`)**
-- ✅ API یکپارچه: auth، telemetry، risk، monitoring/alerts، PANIC، analyze، threat، escort-plan، scenarios/reports، devices/commands، operations/governance/security/training
-- ✅ چرخهٔ هشدار سمت سرور: active → acknowledged → resolved، ارتقای خودکار با مهلت ۶۰s/۳m/۱۰m/۳۰m
-- ✅ تله‌متری ۵Hz از `FusionOrchestrator` (CEP95 واقعی و سهم منابع)، شبکهٔ ریسک ۱Hz از `RiskEngine.assessPoint`
-- ✅ شش سناریوی جدید با موتور شبیه‌سازی دارای pause/resume/سرعت و گزارش AAR
-- ✅ اسکن امنیتی = اعتبارسنجی زنجیرهٔ hash لاگ حسابرسی
-
-**رفع اشکال در ماژول‌های موجود**
-- ✅ Fusion: track در مبدأ ENU قفل می‌شد و همهٔ اندازه‌گیری‌ها outlier رد می‌شدند → مقداردهی اولیه از اولین fix و بازیابی پس از ۵ رد متوالی
-- ✅ Fusion: Wi-Fi/BLE/Cellular با ارتفاع ۰ تبدیل می‌شدند (۱۲۰۰ متر زیر زمین) → منابع افقی بدون قید عمودی
-- ✅ نقش‌های RBAC با نقش‌های طراحی هم‌راستا شد (operator/analyst/planner/commander/technical)
-
-**آزمون‌ها:** ۶۳ تست واحد/یکپارچگی (از جمله راه‌اندازی واقعی سرور روی پورت تصادفی) + ۲۶ بررسی مرورگر end-to-end در هر دو حالت `npm start` و `npm run dev`.
-
----
-
-**توسعه‌دهنده:** Claude AI  
-**تاریخ شروع:** ۲۰۲۶-۰۹-۲۷  
-**تاریخ تکمیل:** ۲۰۲۶-۰۹-۲۷  
-**تمام ۱۲ فاز: ✅ تکمیل**
+- [ ] عصارهٔ واقعی OpenStreetMap برای سه شهر (به دسترسی Overpass ضرورت دارد)
+- [ ] بازبینی بومی متن‌های پشتو
+- [ ] ذخیرهٔ دائمی وضعیت در PostgreSQL/PostGIS
+- [ ] آزمایش میدانی دقت با حسگرهای واقعی

@@ -75,7 +75,7 @@ export function MapControls({ map, base, compact, mode, onFit, cursor, cityName 
         </div>
       )}
 
-      <div className="map-panel row" style={{ position: 'absolute', bottom: 40, insetInlineEnd: 12, zIndex: 3, fontSize: 11, color: 'var(--text-2)', padding: '4px 8px', whiteSpace: 'nowrap', gap: 6, display: compact ? 'none' : undefined }}>
+      <div className="map-panel row" style={{ position: 'absolute', bottom: 80, insetInlineEnd: 12, zIndex: 3, fontSize: 11, color: 'var(--text-2)', padding: '4px 8px', whiteSpace: 'nowrap', gap: 6, display: compact ? 'none' : undefined }}>
         <span data-testid="map-status" style={{ color: base === 'offline' ? 'var(--warning)' : undefined }}>
           {base === 'offline' ? <><i className="ph ph-wifi-slash" /> {t('map.offline')}</> : base === 'loading' ? t('map.loading') : cityName}
         </span>

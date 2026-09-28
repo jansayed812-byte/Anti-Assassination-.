@@ -172,6 +172,9 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
 .mk-end { width: 26px; height: 26px; border-radius: 50%; background: #0c1320; color: #fff; border: 2px solid #fff; font-size: 11px; font-weight: 700; }
 .mk-threat { width: 22px; height: 22px; border-radius: 4px; transform: rotate(45deg); background: var(--danger); border: 2px solid #fff; animation: pulse 1.6s infinite; }
 .maplibregl-ctrl-attrib { font-size: 10px; }
+/* The legend sits at the inline start; in RTL that is the right edge, so the scale + attribution move to the left. */
+[dir='rtl'] .maplibregl-ctrl-bottom-right { right: auto; left: 0; }
+[dir='rtl'] .maplibregl-ctrl-bottom-right .maplibregl-ctrl { float: left; margin: 0 0 10px 10px; }
 .maplibregl-popup-content { background: var(--surface) !important; color: var(--text) !important; border-radius: var(--r-m) !important; box-shadow: var(--shadow-3) !important; padding: 10px 12px !important; font-family: var(--font); }
 .maplibregl-popup-tip { border-top-color: var(--surface) !important; border-bottom-color: var(--surface) !important; }
 .risk-grad { display: inline-block; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--risk-low), var(--risk-medium) 30%, var(--risk-high) 65%, var(--risk-critical)); }

@@ -2,10 +2,12 @@
  * Phase 9: Spatial Analysis
  */
 import { Pool } from 'pg';
+import { L } from '../server/i18n/messages';
+import type { Tri } from '../server/i18n/types';
 
 export interface ProximityQuery { lat: number; lon: number; radius_m: number; severity_min?: 'low' | 'medium' | 'high' | 'critical'; }
 export interface ProximityResult { incident_id: string; type: string; severity: string; distance_m: number; lat: number; lon: number; confidence: number; observed_at: string; }
-export interface AreaRisk { lat: number; lon: number; radius_m: number; incident_count: number; max_severity: string; avg_confidence: number; recommendations: string[]; }
+export interface AreaRisk { lat: number; lon: number; radius_m: number; incident_count: number; max_severity: string; avg_confidence: number; recommendations: Tri[]; }
 
 const SEVERITY_ORDER = ['low', 'medium', 'high', 'critical'];
 
@@ -33,14 +35,15 @@ export class SpatialAnalysis {
     return (await this.pool.query(sql, [lat, lon, radius_m])).rows;
   }
 
-  private _buildRecs(count: number, maxSeverity: string, incidents: ProximityResult[]): string[] {
-    const r: string[] = [];
-    if (count === 0) { r.push('منطقه امن — خطری شناسایی نشد'); return r; }
-    if (maxSeverity === 'critical') { r.push('تخلیه فوری توصیه می‌شود'); r.push('تماس با تیم واکنش سریع'); }
-    else if (maxSeverity === 'high') { r.push('افزایش آماده‌باش تیم‌ها'); r.push('محدوده را با احتیاط عبور کنید'); }
-    else if (maxSeverity === 'medium') r.push('پایش مستمر توصیه می‌شود');
+  /** Recommendations in Dari, Pashto and English. */
+  private _buildRecs(count: number, maxSeverity: string, incidents: ProximityResult[]): Tri[] {
+    const r: Tri[] = [];
+    if (count === 0) { r.push(L('area.safe')); return r; }
+    if (maxSeverity === 'critical') { r.push(L('area.evacuate')); r.push(L('area.qrf')); }
+    else if (maxSeverity === 'high') { r.push(L('area.readiness')); r.push(L('area.caution')); }
+    else if (maxSeverity === 'medium') r.push(L('area.watch'));
     const types = [...new Set(incidents.map(i => i.type))];
-    if (types.length > 0) r.push(`رخدادهای شناسایی‌شده: ${types.join('، ')}`);
+    if (types.length > 0) r.push(L('area.types', { types: types.join(', ') }));
     return r;
   }
 }

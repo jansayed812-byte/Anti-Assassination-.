@@ -19,6 +19,15 @@ const server = createOpsServer({
   demoMode: process.env.DEMO_MODE ? process.env.DEMO_MODE === 'true' : !production,
   corsOrigins: process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean),
   staticDir: process.env.STATIC_DIR ?? fileURLToPath(new URL('../../dashboard/dist', import.meta.url)),
+  osmDir: process.env.OSM_DIR,
+  branches: process.env.BRANCHES?.split(',').map((s) => s.trim()).filter(Boolean),
+  rateLimitRpm: process.env.RATE_LIMIT_RPM ? Number(process.env.RATE_LIMIT_RPM) : undefined,
+  map: {
+    styleUrl: process.env.MAP_STYLE_URL,
+    terrainUrl: process.env.MAP_TERRAIN_URL,
+    terrainEncoding: process.env.MAP_TERRAIN_ENCODING === 'mapbox' ? 'mapbox' : undefined,
+    attribution: process.env.MAP_ATTRIBUTION,
+  },
 });
 
 const port = Number(process.env.PORT ?? 8000);

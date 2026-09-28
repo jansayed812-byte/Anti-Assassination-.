@@ -1,6 +1,6 @@
 /**
  * Phase 2 Integration Tests
- * تست‌های یکپارچگی برای Message Bus و Event Contract
+ * آزمایش‌های ادغام برای Message Bus و قرارداد رویداد (Event Contract)
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';

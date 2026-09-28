@@ -119,6 +119,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
       DEMO_MODE: ${DEMO_MODE:-true}
+      MAP_STYLE_URL: ${MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/liberty}
+      MAP_TERRAIN_URL: ${MAP_TERRAIN_URL:-https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png}
+      BRANCHES: ${BRANCHES:-MZR,KBL,HRT}
     ports:
       - "8000:8000"
     networks:

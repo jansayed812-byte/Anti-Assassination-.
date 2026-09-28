@@ -1,6 +1,6 @@
 /**
  * Base Event Contract
- * قرارداد پایه رویدادهای سامانه
+ * قرارداد پایهٔ رویدادهای سیستم (Event Contract)
  */
 
 export interface EventQuality {

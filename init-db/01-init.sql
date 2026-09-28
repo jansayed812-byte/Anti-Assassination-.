@@ -1,5 +1,5 @@
 -- PostgreSQL Initial Setup
--- سامانه ارزیابی امنیتی محیط‌های عملیاتی
+-- سیستم ارزیابی امنیتی محیط‌های عملیاتی (Security Assessment)
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
