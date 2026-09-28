@@ -14,7 +14,8 @@
     "lint": "eslint 'services/**/*.ts' 'tests/**/*.ts' --ext .ts",
     "fetch:osm": "node scripts/fetch-osm.mjs",
     "test:e2e": "playwright test",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "test:perf": "cd services && node --import tsx ../tests/perf/perf.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

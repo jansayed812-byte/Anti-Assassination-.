@@ -13,16 +13,38 @@ export interface Path { nodes: number[]; edges: Edge[]; cost: number }
 export const URBAN_FACTOR = 0.8;
 export const edgeSeconds = (e: Edge) => e.len / ((e.speedKmh * URBAN_FACTOR) / 3.6);
 
+/** Binary min-heap of (key, node) pairs in typed arrays — no per-push allocation. */
 class MinHeap {
-  private a: Array<[number, number]> = [];
-  push(k: number, v: number) { const a = this.a; a.push([k, v]); let i = a.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (a[p][0] <= a[i][0]) break; [a[p], a[i]] = [a[i], a[p]]; i = p; } }
-  pop(): [number, number] | undefined {
-    const a = this.a; if (!a.length) return undefined;
-    const top = a[0], last = a.pop()!;
-    if (a.length) { a[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m; } }
+  private k = new Float64Array(1024);
+  private v = new Int32Array(1024);
+  private n = 0;
+  push(key: number, val: number): void {
+    if (this.n === this.k.length) {
+      const k = new Float64Array(this.n * 2), v = new Int32Array(this.n * 2);
+      k.set(this.k); v.set(this.v); this.k = k; this.v = v;
+    }
+    let i = this.n++;
+    while (i > 0) { const p = (i - 1) >> 1; if (this.k[p] <= key) break; this.k[i] = this.k[p]; this.v[i] = this.v[p]; i = p; }
+    this.k[i] = key; this.v[i] = val;
+  }
+  /** Removes the entry with the smallest key and returns its node. */
+  pop(): number {
+    const top = this.v[0], n = --this.n;
+    if (n > 0) {
+      const key = this.k[n], val = this.v[n];
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        if (l >= n) break;
+        const m = l + 1 < n && this.k[l + 1] < this.k[l] ? l + 1 : l;
+        if (this.k[m] >= key) break;
+        this.k[i] = this.k[m]; this.v[i] = this.v[m]; i = m;
+      }
+      this.k[i] = key; this.v[i] = val;
+    }
     return top;
   }
-  get size() { return this.a.length; }
+  get size(): number { return this.n; }
 }
 
 export class RoadGraph {
@@ -33,6 +55,9 @@ export class RoadGraph {
   private grid = new Map<string, number[]>();
   private maxSpeed = 1;
   private static CELL = 0.004;
+  /** Node positions in metres on a local equirectangular plane (cheap A* heuristic). */
+  private px = new Float64Array(0);
+  private py = new Float64Array(0);
 
   constructor(roads: Road[]) {
     for (const r of roads) {
@@ -45,6 +70,10 @@ export class RoadGraph {
         if (!r.oneway) this.link(b, a, speed, r);
       }
     }
+    const lat0 = this.nodes.reduce((sum, p) => sum + p.lat, 0) / Math.max(1, this.nodes.length);
+    const k = (Math.PI / 180) * 6_371_000, kx = k * Math.cos((lat0 * Math.PI) / 180);
+    this.px = Float64Array.from(this.nodes, (p) => p.lon * kx);
+    this.py = Float64Array.from(this.nodes, (p) => p.lat * k);
   }
 
   private node(lat: number, lon: number): number {
@@ -89,28 +118,49 @@ export class RoadGraph {
   /** A* with a caller-supplied edge cost (seconds-like; must be ≥ travel time for the heuristic to stay admissible). */
   astar(from: number, to: number, cost: (e: Edge) => number): Path | null {
     if (from === to) return { nodes: [from], edges: [], cost: 0 };
-    const target = this.nodes[to];
-    const h = (n: number) => distanceM(this.nodes[n], target) / ((this.maxSpeed * URBAN_FACTOR) / 3.6);
-    const g = new Map<number, number>([[from, 0]]);
-    const prev = new Map<number, Edge>();
+    // Straight-line time at the top speed, shrunk by 1 % so the planar approximation (≤ 0.2 % off across a
+    // city) can never overestimate — the heuristic stays admissible and A* optimal.
+    const tx = this.px[to], ty = this.py[to], px = this.px, py = this.py;
+    const inv = 0.99 / ((this.maxSpeed * URBAN_FACTOR) / 3.6);
+    return this.search(from, (n) => n === to, (n) => Math.hypot(px[n] - tx, py[n] - ty) * inv, cost);
+  }
+
+  /**
+   * Cheapest path from `from` to whichever node of `targets` is cheapest to reach (Dijkstra, stops at the first
+   * target settled) — one search instead of one per candidate.
+   */
+  nearestOf(from: number, targets: Set<number>, cost: (e: Edge) => number): (Path & { target: number }) | null {
+    if (targets.has(from)) return { nodes: [from], edges: [], cost: 0, target: from };
+    const p = this.search(from, (n) => targets.has(n), () => 0, cost);
+    return p ? { ...p, target: p.nodes[p.nodes.length - 1] } : null;
+  }
+
+  /** Best-first search over typed arrays (per-call allocation is cheap next to Map bookkeeping on large graphs). */
+  private search(from: number, isGoal: (n: number) => boolean, h: (n: number) => number, cost: (e: Edge) => number): Path | null {
+    const n = this.nodes.length;
+    const g = new Float64Array(n).fill(Infinity);
+    const prev = new Int32Array(n).fill(-1);
+    const closed = new Uint8Array(n);
     const open = new MinHeap();
+    g[from] = 0;
     open.push(h(from), from);
-    const closed = new Set<number>();
+    let goal = -1;
     while (open.size) {
-      const [, n] = open.pop()!;
-      if (n === to) break;
-      if (closed.has(n)) continue;
-      closed.add(n);
-      const gn = g.get(n)!;
-      for (const e of this.out[n]) {
-        const c = gn + cost(e);
-        if (c < (g.get(e.to) ?? Infinity)) { g.set(e.to, c); prev.set(e.to, e); open.push(c + h(e.to), e.to); }
+      const u = open.pop();
+      if (closed[u]) continue;
+      if (isGoal(u)) { goal = u; break; }
+      closed[u] = 1;
+      const gu = g[u];
+      for (const e of this.out[u]) {
+        if (closed[e.to]) continue;
+        const c = gu + cost(e);
+        if (c < g[e.to]) { g[e.to] = c; prev[e.to] = e.id; open.push(c + h(e.to), e.to); }
       }
     }
-    if (!prev.has(to)) return null;
+    if (goal < 0) return null;
     const edges: Edge[] = [];
-    for (let n = to; n !== from; ) { const e = prev.get(n)!; edges.push(e); n = e.from; }
+    for (let v = goal; v !== from; ) { const e = this.edges[prev[v]]; edges.push(e); v = e.from; }
     edges.reverse();
-    return { nodes: [from, ...edges.map((e) => e.to)], edges, cost: g.get(to)! };
+    return { nodes: [from, ...edges.map((e) => e.to)], edges, cost: g[goal] };
   }
 }

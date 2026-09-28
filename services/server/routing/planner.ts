@@ -35,15 +35,17 @@ const SUPPORT_KINDS = new Set<PoiKind>(['hospital', 'clinic', 'fuel', 'airport']
 const undirected = (e: Edge) => (e.from < e.to ? `${e.from}-${e.to}` : `${e.to}-${e.from}`);
 
 export class RoutePlanner {
-  private riskCache = new Map<number, number>();
+  private riskCache: Float64Array;
   private riskVersion = -1;
 
-  constructor(private graph: RoadGraph, private risk: RiskModel, private geo: BranchGeo, private blind: () => BlindCells, private cellOf: (p: LatLon) => string) {}
+  constructor(private graph: RoadGraph, private risk: RiskModel, private geo: BranchGeo, private blind: () => BlindCells, private cellOf: (p: LatLon) => string) {
+    this.riskCache = new Float64Array(graph.edges.length).fill(NaN);
+  }
 
   private edgeRisk(e: Edge): number {
-    if (this.risk.version !== this.riskVersion) { this.riskCache.clear(); this.riskVersion = this.risk.version; }
-    let s = this.riskCache.get(e.id);
-    if (s === undefined) { s = this.risk.scoreAt(e.mid); this.riskCache.set(e.id, s); }
+    if (this.risk.version !== this.riskVersion) { this.riskCache.fill(NaN); this.riskVersion = this.risk.version; }
+    let s = this.riskCache[e.id];
+    if (Number.isNaN(s)) { s = this.risk.scoreAt(e.mid); this.riskCache[e.id] = s; }
     return s;
   }
 
@@ -70,13 +72,11 @@ export class RoutePlanner {
   /** Safe house cheapest to reach by risk-weighted cost (houses within 300 m of the start are skipped). */
   nearestSafeHouse(from: LatLon): Poi | undefined {
     const houses = this.geo.pois.filter((p) => p.kind === 'safe_house' && distanceM(p, from) > 300);
-    let best: { p: Poi; c: number } | undefined;
-    const cost = this.cost(ALPHA.E, new Set());
-    for (const h of houses) {
-      const leg = this.graph.astar(this.graph.nearest(from).node, this.graph.nearest(h).node, cost);
-      if (leg && (!best || leg.cost < best.c)) best = { p: h, c: leg.cost };
-    }
-    return best?.p;
+    if (!houses.length) return undefined;
+    const byNode = new Map<number, Poi>();
+    for (const h of houses) { const n = this.graph.nearest(h).node; if (!byNode.has(n)) byNode.set(n, h); }
+    const hit = this.graph.nearestOf(this.graph.nearest(from).node, new Set(byNode.keys()), this.cost(ALPHA.E, new Set()));
+    return hit ? byNode.get(hit.target) : undefined;
   }
 
   /** Compute all four PACE routes. `waypoints[k]` forces route k through user-placed points. */
