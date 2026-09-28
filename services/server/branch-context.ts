@@ -14,7 +14,7 @@ import { RealtimeBus } from './realtime';
 import { RoadGraph } from './routing/graph';
 import { RoutePlanner, type BlindCells } from './routing/planner';
 import { AlertService } from './domain/alerts';
-import { BlindSpotService, type BlindSpotZone } from './domain/blindspots';
+import { BlindSpotService, type BlindSpotGrowth, type BlindSpotZone } from './domain/blindspots';
 import { DetectionService } from './domain/detections';
 import { DeviceRegistry } from './domain/devices';
 import { PlanService } from './domain/plans';
@@ -127,13 +127,21 @@ export function createBranchContext(def: BranchDef, opts: { dataDir: string; sce
   });
   detections.on('changed', (d) => bus.publish('risk', { detection: d }));
   risk.on('changed', (reason: 'incidents' | 'gaps') => { if (reason === 'incidents') blind?.schedule(); });
-  blind.on('changed', (zones: BlindSpotZone[], fresh: BlindSpotZone[]) => {
+  blind.on('changed', (zones: BlindSpotZone[], fresh: BlindSpotZone[], grown: BlindSpotGrowth[]) => {
     bus.publish('blindspots', { zones: zones.map(({ cells: _cells, ...z }) => z), revision: blind!.revision });
     for (const z of fresh) {
       if (z.type === 'access') continue;
       alerts.create({
         level: z.routes.length ? 'error' : 'warning', source: 'blindspot',
         title: L('alert.blindSpot', { id: z.id, type: z.label }),
+        src: L('alert.blindSpot.src', { area: z.area_km2, near: z.nearest_support?.name ?? '—' }),
+      });
+    }
+    for (const { zone: z, added_km2 } of grown) {
+      if (z.type === 'access') continue;
+      alerts.create({
+        level: z.routes.length ? 'error' : 'warning', source: 'blindspot',
+        title: L('alert.blindSpot.grown', { id: z.id, type: z.label, area: added_km2 }),
         src: L('alert.blindSpot.src', { area: z.area_km2, near: z.nearest_support?.name ?? '—' }),
       });
     }

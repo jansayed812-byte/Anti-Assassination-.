@@ -14,6 +14,7 @@ const M = {
   'alert.report.src': tri('ثبت دستی از کنسول', 'له کنسول څخه لاسي ثبت', 'Logged manually from the console'),
   'alert.sim.src': tri('شبیه‌سازی · {name}', 'شبیه‌سازي · {name}', 'Simulation · {name}'),
   'alert.blindSpot': tri('نقطهٔ کور جدید: {id} ({type})', 'نوی ړوند ټکی: {id} ({type})', 'New blind spot: {id} ({type})'),
+  'alert.blindSpot.grown': tri('نقطهٔ کور {id} ({type}) {area} کیلومتر مربع بزرگتر شد', 'ړوند ټکی {id} ({type}) {area} مربع کیلومتره پراخ شو', 'Blind spot {id} ({type}) grew by {area} km²'),
   'alert.blindSpot.src': tri('{area} کیلومتر مربع · نزدیک {near}', '{area} مربع کیلومتره · {near} ته نږدې', '{area} km² · near {near}'),
   'alert.deviceOffline': tri('{device} آفلاین شد', '{device} آفلاین شو', '{device} went offline'),
   'alert.sync': tri('هماهنگ‌سازی از {branch}: {title}', 'له {branch} څخه همغږي: {title}', 'Synced from {branch}: {title}'),

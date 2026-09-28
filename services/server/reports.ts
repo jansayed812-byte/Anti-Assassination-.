@@ -52,7 +52,7 @@ export function branchSummary(ctx: BranchContext, opts: { from?: number; to?: nu
 const WORDS: Record<string, Tri> = {
   total: { dr: 'مجموع', ps: 'ټول', en: 'Total' }, open: { dr: 'باز', ps: 'پرانیستې', en: 'Open' },
   critical: { dr: 'بحرانی', ps: 'بحراني', en: 'Critical' }, error: { dr: 'خطا', ps: 'تېروتنه', en: 'Error' }, warning: { dr: 'اخطار', ps: 'خبرداری', en: 'Warning' }, info: { dr: 'معلومات', ps: 'معلومات', en: 'Info' },
-  high: { dr: 'بلند', ps: 'لوړ', en: 'High' }, medium: { dr: 'متوسط', ps: 'منځنی', en: 'Medium' }, low: { dr: 'پایین', ps: 'ټیټ', en: 'Low' },
+  high: { dr: 'بلند', ps: 'لوړ', en: 'High' }, medium: { dr: 'متوسط', ps: 'منځنی', en: 'Medium' }, low: { dr: 'کم', ps: 'ټیټ', en: 'Low' },
   active: { dr: 'فعال', ps: 'فعال', en: 'Active' }, acknowledged: { dr: 'تأیید شده', ps: 'تایید شوی', en: 'Acknowledged' }, escalated: { dr: 'ارتقا یافته', ps: 'لوړ شوی', en: 'Escalated' }, resolved: { dr: 'حل شده', ps: 'حل شوی', en: 'Resolved' },
   running: { dr: 'در جریان', ps: 'روان', en: 'Running' }, pending_approval: { dr: 'منتظر تأیید', ps: 'تایید ته انتظار', en: 'Pending approval' }, approved: { dr: 'تأیید شده', ps: 'تایید شوی', en: 'Approved' }, closed: { dr: 'بسته', ps: 'تړل شوی', en: 'Closed' }, draft: { dr: 'مسوده', ps: 'مسوده', en: 'Draft' },
   network: { dr: 'بدون شبکه', ps: 'بې شبکې', en: 'No network' }, monitoring: { dr: 'بدون نظارت', ps: 'بې څارنې', en: 'Unmonitored' }, access: { dr: 'دسترسی محدود', ps: 'محدود لاسرسی', en: 'Limited access' },

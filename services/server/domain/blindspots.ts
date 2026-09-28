@@ -7,14 +7,14 @@
  * Gap cells of one type are grouped into zones (H3 adjacency) and each zone gets a report.
  */
 import { EventEmitter } from 'events';
-import { cellsToMultiPolygon, latLngToCell } from 'h3-js';
+import { cellArea, cellsToMultiPolygon, latLngToCell } from 'h3-js';
 import { bearingDeg, distanceM, pointInRing, type LatLon } from '../geo';
 import type { BranchGeo, Poi } from '../geodata/types';
 import { L, lengthText, type MsgKey } from '../i18n/messages';
 import type { Tri } from '../i18n/types';
 import type { RoadGraph } from '../routing/graph';
 import type { Device } from './devices';
-import { CELL_AREA_KM2, H3_RES, type RiskModel } from './risk';
+import { H3_RES, type RiskModel } from './risk';
 
 export type BlindType = 'network' | 'monitoring' | 'access';
 export const RSSI_THRESHOLD_DBM = -95;
@@ -32,6 +32,12 @@ export interface BlindSpotZone {
 
 const ACCESS_ROAD_M = 250;
 const PROTECTED_RADIUS_M = 400;
+/** An existing zone that gains at least this many newly blind cells (≈ 0.5 km²) is reported as grown. */
+const GROWTH_MIN_CELLS = 5;
+
+/** A zone that already existed but grew (e.g. a relay went offline next to an existing gap). */
+export interface BlindSpotGrowth { zone: BlindSpotZone; added_cells: number; added_km2: number }
+const areaKm2 = (cells: string[]) => +cells.reduce((s, c) => s + cellArea(c, 'km2'), 0).toFixed(2);
 
 export class BlindSpotService extends EventEmitter {
   private zonesCache: BlindSpotZone[] = [];
@@ -98,7 +104,7 @@ export class BlindSpotService extends EventEmitter {
         const id = `BS-${type[0].toUpperCase()}${parseInt(minCell.slice(3, 11), 16).toString(36).slice(-4).toUpperCase()}`;
         const near = nearest(support, centroid);
         zones.push({
-          id, type, label: L(`bs.type.${type}` as MsgKey), cells, cell_count: cells.length, area_km2: +(cells.length * CELL_AREA_KM2).toFixed(2),
+          id, type, label: L(`bs.type.${type}` as MsgKey), cells, cell_count: cells.length, area_km2: areaKm2(cells),
           centroid: { lat: +centroid.lat.toFixed(6), lon: +centroid.lon.toFixed(6) }, polygon: cellsToMultiPolygon(cells, true),
           max_risk: Math.max(...scores), avg_risk: +(scores.reduce((s, x) => s + x, 0) / scores.length).toFixed(3),
           routes: this.crossings(new Set(cells)),
@@ -113,12 +119,22 @@ export class BlindSpotService extends EventEmitter {
 
     const previous = this.zonesCache;
     const fresh = this.revision > 0 ? zones.filter((z) => !previous.some((p) => p.type === z.type && overlap(p.cells, z.cells) >= 0.3)) : [];
+    const grown: BlindSpotGrowth[] = [];
+    if (this.revision > 0) {
+      const before: Record<BlindType, Set<string>> = { network: new Set(), monitoring: new Set(), access: new Set() };
+      for (const p of previous) for (const c of p.cells) before[p.type].add(c);
+      for (const z of zones) {
+        if (fresh.includes(z)) continue;
+        const added = z.cells.filter((c) => !before[z.type].has(c));
+        if (added.length >= GROWTH_MIN_CELLS) grown.push({ zone: z, added_cells: added.length, added_km2: areaKm2(added) });
+      }
+    }
     const sig = (zs: BlindSpotZone[]) => zs.map((z) => `${z.id}:${z.cell_count}`).join(',');
     if (this.revision === 0 || sig(previous) !== sig(zones)) this.revision++;
     for (const z of zones) if (!this.firstSeen.has(z.id)) this.firstSeen.set(z.id, z.first_seen);
     this.zonesCache = zones;
     this.risk.setCoverageGaps([...byType.network, ...byType.monitoring]);
-    this.emit('changed', zones, fresh);
+    this.emit('changed', zones, fresh, grown);
     return zones;
   }
 

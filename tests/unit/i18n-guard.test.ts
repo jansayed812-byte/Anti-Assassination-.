@@ -70,7 +70,9 @@ describe('no Iranian-Persian vocabulary in the repository', () => {
   });
 
   it('has no Iranian locale code or Persian dictionary file', () => {
-    const hits = files.filter((f) => /fa-IR/.test(readFileSync(join(ROOT, f), 'utf8')));
+    // Built from parts so this file does not match its own pattern.
+    const iranLocale = new RegExp(['fa', 'IR'].join('-'));
+    const hits = files.filter((f) => iranLocale.test(readFileSync(join(ROOT, f), 'utf8')));
     expect(hits).toEqual([]);
     expect(files.some((f) => /i18n\/fa\.json$/.test(f))).toBe(false);
   });

@@ -22,17 +22,21 @@ export function bearingDeg(a: LatLon, b: LatLon): number {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
-/** Point `eastM`/`northM` metres from `p` (local tangent plane — exact to < 1 cm over a city). */
+/**
+ * Point `eastM`/`northM` metres from `p`. Longitude is scaled at the mean latitude of the two points, which keeps
+ * the geodesic distance within a few centimetres of hypot(east, north) across a city (±10 km).
+ */
 export function offset(p: LatLon, eastM: number, northM: number): LatLon {
+  const lat = p.lat + (northM / R_EARTH) * (180 / Math.PI);
   return {
-    lat: +(p.lat + (northM / R_EARTH) * (180 / Math.PI)).toFixed(7),
-    lon: +(p.lon + (eastM / (R_EARTH * Math.cos(rad(p.lat)))) * (180 / Math.PI)).toFixed(7),
+    lat: +lat.toFixed(7),
+    lon: +(p.lon + (eastM / (R_EARTH * Math.cos(rad((p.lat + lat) / 2)))) * (180 / Math.PI)).toFixed(7),
   };
 }
 
-/** Local east/north metres of `p` relative to `origin`. */
+/** Local east/north metres of `p` relative to `origin` (inverse of `offset`). */
 export function toLocal(origin: LatLon, p: LatLon): [number, number] {
-  return [rad(p.lon - origin.lon) * R_EARTH * Math.cos(rad(origin.lat)), rad(p.lat - origin.lat) * R_EARTH];
+  return [rad(p.lon - origin.lon) * R_EARTH * Math.cos(rad((origin.lat + p.lat) / 2)), rad(p.lat - origin.lat) * R_EARTH];
 }
 
 /** Point at fraction t (0–1) along a polyline, by arc length. */
