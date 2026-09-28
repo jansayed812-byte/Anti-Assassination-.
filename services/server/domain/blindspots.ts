@@ -97,11 +97,12 @@ export class BlindSpotService extends EventEmitter {
     const support = this.geo.pois.filter((p) => p.kind === 'police' || p.kind === 'hospital' || p.kind === 'hq');
     const zones: BlindSpotZone[] = [];
     for (const type of ['network', 'monitoring', 'access'] as BlindType[]) {
-      for (const cells of this.components(byType[type])) {
+      const comps = this.components(byType[type]);
+      const ids = this.assignIds(type, comps);
+      for (const [ci, cells] of comps.entries()) {
         const centroid = { lat: cells.reduce((s, c) => s + this.risk.cellCenter(c)!.lat, 0) / cells.length, lon: cells.reduce((s, c) => s + this.risk.cellCenter(c)!.lon, 0) / cells.length };
         const scores = cells.map((c) => scoreOf.get(c) ?? 0);
-        const minCell = [...cells].sort()[0];
-        const id = `BS-${type[0].toUpperCase()}${parseInt(minCell.slice(3, 11), 16).toString(36).slice(-4).toUpperCase()}`;
+        const id = ids[ci];
         const near = nearest(support, centroid);
         zones.push({
           id, type, label: L(`bs.type.${type}` as MsgKey), cells, cell_count: cells.length, area_km2: areaKm2(cells),
@@ -136,6 +137,34 @@ export class BlindSpotService extends EventEmitter {
     this.risk.setCoverageGaps([...byType.network, ...byType.monitoring]);
     this.emit('changed', zones, fresh, grown);
     return zones;
+  }
+
+  /**
+   * Stable zone identity: a zone keeps the id of the previous zone of the same type it shares most cells with
+   * (moving drones and relay changes reshape zones every few seconds); genuinely new zones get an id derived
+   * from their lowest cell.
+   */
+  private assignIds(type: BlindType, comps: string[][]): string[] {
+    const prev = this.zonesCache.filter((z) => z.type === type).map((z) => ({ id: z.id, cells: new Set(z.cells) }));
+    const pairs: Array<{ i: number; id: string; shared: number }> = [];
+    comps.forEach((cells, i) => {
+      for (const p of prev) {
+        const shared = cells.reduce((n, c) => n + (p.cells.has(c) ? 1 : 0), 0);
+        if (shared > 0 && shared >= 0.3 * Math.min(cells.length, p.cells.size)) pairs.push({ i, id: p.id, shared });
+      }
+    });
+    pairs.sort((a, b) => b.shared - a.shared || a.id.localeCompare(b.id));
+    const out: string[] = new Array(comps.length);
+    const used = new Set<string>();
+    for (const p of pairs) if (out[p.i] === undefined && !used.has(p.id)) { out[p.i] = p.id; used.add(p.id); }
+    comps.forEach((cells, i) => {
+      if (out[i] !== undefined) return;
+      const base = `BS-${type[0].toUpperCase()}${parseInt(cells[0].slice(3, 11), 16).toString(36).slice(-4).toUpperCase()}`;
+      let id = base;
+      for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+      out[i] = id; used.add(id);
+    });
+    return out;
   }
 
   private components(cells: Set<string>): string[][] {

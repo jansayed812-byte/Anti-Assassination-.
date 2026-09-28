@@ -13,6 +13,7 @@
   "branch.readonly": "Read-only",
   "branch.hq": "HQ",
   "branch.switched": "Now working in {name}",
+  "nav.workspaces": "Workspaces",
   "language": "Language",
   "theme": "Theme",
   "theme.dark": "Dark",

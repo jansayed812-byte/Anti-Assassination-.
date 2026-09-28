@@ -12,7 +12,9 @@
     "dev": "node scripts/dev.mjs",
     "typecheck": "npm --prefix services run typecheck && npm --prefix dashboard run typecheck",
     "lint": "eslint 'services/**/*.ts' 'tests/**/*.ts' --ext .ts",
-    "fetch:osm": "node scripts/fetch-osm.mjs"
+    "fetch:osm": "node scripts/fetch-osm.mjs",
+    "test:e2e": "playwright test",
+    "test:unit": "vitest run"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

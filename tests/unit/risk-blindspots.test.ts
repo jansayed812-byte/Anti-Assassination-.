@@ -176,7 +176,7 @@ describe('BlindSpotService', () => {
     const zones = svc.recompute();
     expect(zones.length).toBeGreaterThan(0);
     for (const z of zones) {
-      expect(z.id).toMatch(/^BS-[NMA][0-9A-Z]{1,4}$/);
+      expect(z.id).toMatch(/^BS-[NMA][0-9A-Z]{1,4}(-\d+)?$/);
       expect(z.cell_count).toBe(z.cells.length);
       expect(z.area_km2).toBeCloseTo(z.cells.reduce((sum, c) => sum + cellArea(c, 'km2'), 0), 1);
       for (const k of ['dr', 'ps', 'en'] as const) { expect(z.detail[k]).toBeTruthy(); expect(z.mitigation[k]).toBeTruthy(); expect(z.label[k]).toBeTruthy(); }
@@ -234,6 +234,23 @@ describe('BlindSpotService', () => {
     // A recompute without changes reports nothing.
     svc.recompute();
     expect(grown).toHaveLength(0);
+  });
+
+  it('keeps zone ids and first-seen times stable while a drone moves', () => {
+    const drone = { ...relay('D-01', offset(MZR.center, -500, 0)), type: 'drone', coverage: { kind: 'drone', footprint_m: 350 } } as Device;
+    const devices = [relay('R1', MZR.center, 'on', 60), drone];
+    const corridor = { plan: 'ESC-9', route: 'P', path: [offset(MZR.center, -4000, 0), offset(MZR.center, 4000, 0)] };
+    const { svc } = setup(devices, [corridor]);
+    const mon = () => svc.recompute().filter((z) => z.type === 'monitoring').sort((a, b) => a.centroid.lon - b.centroid.lon);
+    const before = mon();
+    expect(before.length).toBeGreaterThanOrEqual(2); // the drone splits the unwatched corridor in two
+    for (const step of [120, 240, 360]) {
+      drone.geo = offset(MZR.center, -500 + step, 0);
+      const after = mon();
+      expect(after.map((z) => z.id)).toEqual(before.map((z) => z.id));
+      expect(after.map((z) => z.first_seen)).toEqual(before.map((z) => z.first_seen));
+    }
+    expect(new Set(before.map((z) => z.id)).size).toBe(before.length);
   });
 
   it('marks restricted areas as limited access', () => {

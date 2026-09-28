@@ -42,7 +42,7 @@ export function PlanningList({ showApi }: { showApi: boolean }) {
     <>
       <div className="row-between">
         <h3>{t('pl.title')}</h3>
-        {canWrite && <button className={`btn btn-outline btn-sm ${s.newPlan ? 'on' : ''}`} onClick={() => s.set({ newPlan: !s.newPlan, picking: null })}><i className="ph ph-plus" />{t('pl.new')}</button>}
+        {canWrite && <button className={`btn btn-outline btn-sm ${s.newPlan ? 'on' : ''}`} onClick={() => s.set({ newPlan: !s.newPlan, picking: null })} data-testid="new-plan-toggle"><i className="ph ph-plus" />{t('pl.new')}</button>}
       </div>
       {s.newPlan && canWrite && (
         <form className="card-2" onSubmit={(e) => { e.preventDefault(); void createPlan(); }} data-testid="new-plan">

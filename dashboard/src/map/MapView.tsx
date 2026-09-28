@@ -69,6 +69,9 @@ function offlineStyle(geo: BranchGeo | null, p: MapPalette, theme: 'dark' | 'lig
   };
 }
 
+/** Layers of the current style; empty while a new style is loading (MapLibre's getStyle() is undefined then). */
+const styleLayers = (map: MLMap) => map.getStyle()?.layers ?? [];
+
 /** Basemap labels in the interface language where OSM has them. */
 function localiseLabels(map: MLMap, lang: Lang): void {
   const field = lang === 'en'
@@ -76,7 +79,7 @@ function localiseLabels(map: MLMap, lang: Lang): void {
     : lang === 'ps'
       ? ['coalesce', ['get', 'name:ps'], ['get', 'name:nonlatin'], ['get', 'name']]
       : ['coalesce', ['get', 'name:fa'], ['get', 'name:prs'], ['get', 'name:nonlatin'], ['get', 'name']];
-  for (const l of map.getStyle().layers ?? []) {
+  for (const l of styleLayers(map)) {
     if (l.type !== 'symbol' || l.id.startsWith('ov-')) continue;
     const tf = map.getLayoutProperty(l.id, 'text-field');
     if (tf && JSON.stringify(tf).includes('name')) { try { map.setLayoutProperty(l.id, 'text-field', field); } catch { /* keep style's */ } }
@@ -87,7 +90,7 @@ function installOverlay(map: MLMap, p: MapPalette, cfg: { terrainUrl: string; en
   if (map.getSource('ov-risk')) return;
   for (const id of OV_SOURCES) map.addSource(id, { type: 'geojson', data: EMPTY });
   if (!map.hasImage('hazard')) map.addImage('hazard', hatch(p), { pixelRatio: 2 });
-  const firstSymbol = map.getStyle().layers?.find((l) => l.type === 'symbol')?.id;
+  const firstSymbol = styleLayers(map).find((l) => l.type === 'symbol')?.id;
   if (!map.getSource('ov-dem')) {
     // Separate DEM sources for terrain and hillshade (MapLibre renders both better that way).
     map.addSource('ov-dem', { type: 'raster-dem', tiles: [cfg.terrainUrl], tileSize: 256, encoding: cfg.encoding, maxzoom: 14 });
@@ -176,6 +179,9 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
   const pal = useMemo(() => mapPalette(), [theme]);
   const baseRef = useRef(base);
   baseRef.current = base;
+  // False from a setStyle() call until its 'style.load': effects must not touch layers or paint in between
+  // (MapLibre throws "Style is not done loading"); they re-run on the styleGen bump that follows.
+  const styleReady = useRef(false);
 
   // --- create the map once per branch
   useEffect(() => {
@@ -190,6 +196,7 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
       });
     } catch { setBase('failed'); return; }
     mapRef.current = map;
+    styleReady.current = false;
     (window as unknown as { __opsMap?: MLMap }).__opsMap = map;
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 110 }), 'bottom-right');
     let loaded = false, tileOk = false, tileErrors = 0, demOk = false, demErrors = 0;
@@ -201,6 +208,7 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
       baseRef.current = 'offline';
       setTimeout(() => {
         setBase('offline');
+        styleReady.current = false;
         map.setStyle(offlineStyle(useOps.getState().geo, mapPalette(), usePrefs.getState().theme), { diff: false });
       }, 0);
     };
@@ -209,6 +217,7 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
       installOverlay(map, mapPalette(), { terrainUrl: config.map.terrain_url, encoding: config.map.terrain_encoding, offline: baseRef.current === 'offline' });
       if (baseRef.current !== 'offline') localiseLabels(map, usePrefs.getState().lang);
       switching = false;
+      styleReady.current = true;
       setStyleGen((g) => g + 1);
     });
     map.on('load', () => { loaded = true; clearTimeout(timer); if (baseRef.current === 'loading') setBase('online'); });
@@ -236,21 +245,22 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
   useEffect(() => {
     const map = mapRef.current;
     if (!map || base !== 'offline') return;
+    styleReady.current = false;
     map.setStyle(offlineStyle(geo, pal, theme), { diff: false });
   }, [theme, base === 'offline' ? geo : null]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { const map = mapRef.current; if (map && base === 'online' && styleGen) localiseLabels(map, lang); }, [lang, styleGen, base]);
+  useEffect(() => { const map = mapRef.current; if (map && base === 'online' && styleGen && styleReady.current) localiseLabels(map, lang); }, [lang, styleGen, base]);
 
   // --- 2D / 3D, terrain, buildings
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleGen) return;
+    if (!map || !styleGen || !styleReady.current) return;
     // Terrain must be attached before a camera ease starts: MapLibre prepares elevation only at ease start and
     // an ease that gains terrain mid-flight dereferences an unset elevation centre.
     map.stop();
     try { map.setTerrain(view3d && layers.terrain && map.getSource('ov-dem') ? { source: 'ov-dem', exaggeration: 1.3 } : null); } catch { /* no dem */ }
     map.easeTo({ pitch: view3d ? 50 : 0, bearing: view3d ? map.getBearing() || -14 : 0, duration: 700 });
     if (map.getLayer('ov-hillshade')) map.setLayoutProperty('ov-hillshade', 'visibility', layers.terrain ? 'visible' : 'none');
-    for (const l of map.getStyle().layers ?? []) if (l.type === 'fill-extrusion' && !l.id.startsWith('ov-')) map.setLayoutProperty(l.id, 'visibility', layers.buildings && view3d ? 'visible' : 'none');
+    for (const l of styleLayers(map)) if (l.type === 'fill-extrusion' && !l.id.startsWith('ov-')) map.setLayoutProperty(l.id, 'visibility', layers.buildings && view3d ? 'visible' : 'none');
     const setSky = (map as unknown as { setSky?: (s: unknown) => void }).setSky;
     if (setSky && view3d) { try { setSky.call(map, { 'sky-color': theme === 'dark' ? '#0b1526' : '#bcd6f0', 'horizon-color': theme === 'dark' ? '#1b2a44' : '#e9eef4', 'fog-color': theme === 'dark' ? '#0a101b' : '#f1eee6', 'sky-horizon-blend': 0.5, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.9 }); } catch { /* older runtime */ } }
   }, [view3d, layers.terrain, layers.buildings, styleGen, theme]);
@@ -258,7 +268,7 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
   // --- overlay paint follows theme
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleGen) return;
+    if (!map || !styleGen || !styleReady.current) return;
     if (map.hasImage('hazard')) map.updateImage('hazard', hatch(pal));
     map.setPaintProperty('ov-boundary-line', 'line-color', pal.accent);
     map.setPaintProperty('ov-blind-line', 'line-color', pal.hazard);
@@ -296,17 +306,17 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
   // --- push overlay data
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleGen) return;
+    if (!map || !styleGen || !styleReady.current) return;
     const put = (id: string, fc: FC) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(fc);
     put('ov-risk', data.riskFc); put('ov-blind', data.blindFc); put('ov-incidents', data.incFc); put('ov-routes', data.routesFc);
     put('ov-route-hit', data.hitFc); put('ov-coverage', data.covFc); put('ov-analysis', data.anFc); put('ov-boundary', data.boundaryFc);
   }, [data.riskFc, data.blindFc, data.incFc, data.routesFc, data.hitFc, data.covFc, data.anFc, data.boundaryFc, styleGen]);
-  useEffect(() => { const map = mapRef.current; if (map && styleGen) (map.getSource('ov-cep') as GeoJSONSource | undefined)?.setData(layers.units ? data.cepFc : EMPTY); }, [data.cepFc, styleGen, layers.units]);
+  useEffect(() => { const map = mapRef.current; if (map && styleGen && styleReady.current) (map.getSource('ov-cep') as GeoJSONSource | undefined)?.setData(layers.units ? data.cepFc : EMPTY); }, [data.cepFc, styleGen, layers.units]);
 
   // --- layer visibility and emphasis per workspace
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleGen) return;
+    if (!map || !styleGen || !styleReady.current) return;
     const vis = (id: string, on: boolean) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'); };
     const analysis3d = mode === 'analysis' && view3d;
     vis('ov-risk-fill', layers.risk && !analysis3d);
@@ -324,7 +334,7 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
   // --- markers
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleGen) return;
+    if (!map || !styleGen || !styleReady.current) return;
     const specs: MarkerSpec[] = [];
     const st = useOps.getState();
     if (layers.units && mode !== 'assets') {
@@ -379,7 +389,7 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
   // --- map clicks: pick points, add waypoints, select zones
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleGen) return;
+    if (!map || !styleGen || !styleReady.current) return;
     const onClick = (e: maplibregl.MapMouseEvent) => {
       const st = useOps.getState();
       const p = { lat: +e.lngLat.lat.toFixed(6), lon: +e.lngLat.lng.toFixed(6) };

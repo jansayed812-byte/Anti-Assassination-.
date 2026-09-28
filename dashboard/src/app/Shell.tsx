@@ -34,7 +34,7 @@ function TopBar({ mode, isMobile, tablet, wall }: { mode: Mode; isMobile: boolea
         {wall && <span className="col" style={{ gap: 0, lineHeight: 1.2 }}><b style={{ fontSize: 13 }}>{t('brand')}</b><span className="caption">{t('brand.sub')}</span></span>}
       </span>
       {isMobile ? <b style={{ fontSize: 15, whiteSpace: 'nowrap' }}>{t(`mode.${mode}`)}</b> : (
-        <nav aria-label="workspaces" className="row" style={{ gap: 1, flex: '0 1 auto', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <nav aria-label={t('nav.workspaces')} className="row" style={{ gap: 1, flex: '0 1 auto', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {MODES.map((m, i) => (
             <button key={m.id} className="btn btn-ghost" onClick={() => navigate(`/${m.id}`)} title={`${t(`mode.${m.id}`)} (Alt+${i + 1})`} aria-label={t(`mode.${m.id}`)} aria-current={m.id === mode ? 'page' : undefined}
               style={{ color: m.id === mode ? 'var(--accent)' : undefined, background: m.id === mode ? 'var(--accent-soft)' : undefined, paddingInline: 9, flex: 'none' }}>
@@ -63,7 +63,7 @@ function TopBar({ mode, isMobile, tablet, wall }: { mode: Mode; isMobile: boolea
         <span className="num">{N(open.length)}</span>
         {crit > 0 && !isMobile && <span className="chip chip-danger" style={{ padding: '0 7px' }}>{N(crit)} {t('alert.critical')}</span>}
       </button>
-      <button className="btn btn-danger" onClick={() => s.set({ panicOpen: true })} aria-label="PANIC" style={{ flex: 'none', fontWeight: 700 }}>
+      <button className="btn btn-danger" onClick={() => s.set({ panicOpen: true })} aria-label={t('panic.title')} title={t('panic.title')} style={{ flex: 'none', fontWeight: 700 }}>
         <i className="ph ph-siren" />{!compact && <span>PANIC</span>}
       </button>
       <button onClick={() => s.set({ menuOpen: !s.menuOpen })} aria-label={t('account')} aria-expanded={s.menuOpen} title={t(`role.${role}`)}
@@ -227,7 +227,7 @@ export function Shell() {
         {timeline && <Timeline mode={mode} />}
 
         {isMobile && (
-          <nav aria-label="workspaces" style={{ gridArea: 'tabs', display: 'flex', alignItems: 'stretch', background: 'var(--surface)', boxShadow: 'inset 0 1px 0 var(--line)' }}>
+          <nav aria-label={t('nav.workspaces')} style={{ gridArea: 'tabs', display: 'flex', alignItems: 'stretch', background: 'var(--surface)', boxShadow: 'inset 0 1px 0 var(--line)' }}>
             {MODES.map((m) => (
               <button key={m.id} aria-current={m.id === mode ? 'page' : undefined} onClick={() => { s.set({ sheet: 'insp' }); navigate(`/${m.id}`); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, color: m.id === mode ? 'var(--accent)' : 'var(--text-3)', minHeight: 44, fontSize: 10 }}>
                 <i className={`ph ph-${m.icon}`} style={{ fontSize: 20 }} />{t(`mode.${m.id}`)}
