@@ -69,6 +69,48 @@ describe('config & auth', () => {
     expect((await call('POST', '/advanced-security/scan', op)).status).toBe(403);
   });
 
+  it('raises panic through the normal permission check, not just authentication', async () => {
+    const op = await login('maryam'); // operator: has ack:alerts
+    const r = await call('POST', '/monitoring/panic', op);
+    expect(r.status).toBe(201);
+    expect(r.body.alert.level).toBe('critical');
+    // requirePermission is what audits every call; going through it is what this route was missing.
+    const adm = await login('admin');
+    const audit = await call('GET', '/auth/audit', adm);
+    expect(audit.body.entries.some((e: any) => e.action === 'ack:alerts' && e.resource.endsWith('/monitoring/panic') && e.result === 'allow')).toBe(true);
+    // Panic flips the running plan onto route E; put it back so later tests see the plan as they left it.
+    if (r.body.plan) await call('PATCH', `/security/escort-plan/${r.body.plan.id}`, op, { active_route: 'P' });
+  });
+
+  it('restricts the audit log and user directory to the admin role', async () => {
+    const op = await login('maryam'); // operator: no read:admin
+    expect((await call('GET', '/auth/audit', op)).status).toBe(403);
+    expect((await call('GET', '/auth/users', op)).status).toBe(403);
+    const adm = await login('admin');
+    expect((await call('GET', '/auth/audit', adm)).status).toBe(200);
+    expect((await call('GET', '/auth/users', adm)).status).toBe(200);
+  });
+
+  it('restricts headquarters-wide actions to staff active at headquarters (MZR)', async () => {
+    const atHq = await login('sara'); // technical, home branch MZR = HQ
+    expect((await call('POST', '/advanced-security/scan', atHq)).status).toBe(200);
+    // Switching sara's active branch to HRT (one of her real memberships, not a cross-branch viewer downgrade)
+    // keeps her real `technical` role there, but HRT is not headquarters.
+    const atHrt = (await call('POST', '/auth/switch-branch', atHq, { branch: 'HRT' })).body.access_token;
+    for (const [method, path, body] of [
+      ['POST', '/advanced-security/scan', undefined],
+      ['POST', '/advanced-security/keys/HQ-K1/rotate', undefined],
+      ['POST', '/operations/maintenance/backup/run', undefined],
+      ['POST', '/sync/link', { branch: 'KBL', up: false }],
+    ] as const) {
+      const r = await call(method, path, atHrt, body);
+      expect(r.status, `${method} ${path}`).toBe(403);
+      expect(r.body.code, `${method} ${path}`).toBe('hq_only');
+    }
+    // The sync link a non-HQ technical user was refused really is untouched.
+    expect((await call('GET', '/sync/status', atHq)).body.status.find((s: any) => s.branch === 'KBL').link).toBe('up');
+  });
+
   it('switches role within the active branch in demo mode', async () => {
     const r = await call('POST', '/auth/switch-role', await login('maryam'), { role: 'commander' });
     expect(r.body.role).toBe('commander');

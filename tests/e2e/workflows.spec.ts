@@ -170,3 +170,23 @@ test.describe('branches', () => {
     await expect(popup.locator('h1')).toContainText('هرات');
   });
 });
+
+test.describe('access control', () => {
+  test('the Admin workspace is only reachable by the admin role, in the nav and by direct URL', async ({ page }) => {
+    await login(page, 'maryam', '/live'); // operator: no read:admin
+    await expect(page.locator('header nav button', { hasText: 'Admin' })).toHaveCount(0);
+    const token = await apiLogin(page.request, 'maryam');
+    for (const path of ['/api/auth/audit', '/api/auth/users', '/api/operations/sla/metrics']) {
+      expect((await page.request.get(path, { headers: { authorization: `Bearer ${token}` } })).status(), path).toBe(403);
+    }
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/live$/); // ModeGuard bounces an unauthorized deep link home
+    await expect(page.locator('[data-testid=report-branch]')).toHaveCount(0);
+
+    await signOut(page);
+    await login(page, 'admin', '/live');
+    await expect(page.locator('header nav button', { hasText: 'Admin' })).toBeVisible();
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/admin$/);
+  });
+});

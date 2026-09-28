@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOps, MODES, type Frame, type Mode } from '../stores/ops';
+import { useOps, type Frame, type Mode } from '../stores/ops';
 import { useSession } from '../stores/session';
 import { layoutFor, useMode, useNow, useT, useViewport } from './hooks';
-import { ROLE_HOME, ROLE_ICON, roleTasks } from './roles';
+import { can, ROLE_HOME, ROLE_ICON, roleTasks, visibleModes } from './roles';
 import { SEV } from '../lib/palette';
 import { MapStage } from '../map/MapStage';
 import { AlertCard } from '../ui/AlertCard';
@@ -23,6 +23,7 @@ function TopBar({ mode, isMobile, tablet, wall }: { mode: Mode; isMobile: boolea
   const navigate = useNavigate();
   const s = useOps();
   const role = useSession((x) => x.role) ?? 'viewer';
+  const modes = visibleModes(role);
   const open = s.alerts.filter((a) => a.status === 'active' || a.status === 'escalated');
   const crit = open.filter((a) => a.level === 'critical').length;
   const online = s.conn === 'online';
@@ -35,7 +36,7 @@ function TopBar({ mode, isMobile, tablet, wall }: { mode: Mode; isMobile: boolea
       </span>
       {isMobile ? <b style={{ fontSize: 15, whiteSpace: 'nowrap' }}>{t(`mode.${mode}`)}</b> : (
         <nav aria-label={t('nav.workspaces')} className="row" style={{ gap: 1, flex: '0 1 auto', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {MODES.map((m, i) => (
+          {modes.map((m, i) => (
             <button key={m.id} className="btn btn-ghost" onClick={() => navigate(`/${m.id}`)} title={`${t(`mode.${m.id}`)} (Alt+${i + 1})`} aria-label={t(`mode.${m.id}`)} aria-current={m.id === mode ? 'page' : undefined}
               style={{ color: m.id === mode ? 'var(--accent)' : undefined, background: m.id === mode ? 'var(--accent-soft)' : undefined, paddingInline: 9, flex: 'none' }}>
               <i className={`ph ph-${m.icon}`} style={{ fontSize: 16 }} />{(!tablet || m.id === mode) && <span>{t(`mode.${m.id}`)}</span>}
@@ -63,9 +64,11 @@ function TopBar({ mode, isMobile, tablet, wall }: { mode: Mode; isMobile: boolea
         <span className="num">{N(open.length)}</span>
         {crit > 0 && !isMobile && <span className="chip chip-danger" style={{ padding: '0 7px' }}>{N(crit)} {t('alert.critical')}</span>}
       </button>
-      <button className="btn btn-danger" onClick={() => s.set({ panicOpen: true })} aria-label={t('panic.title')} title={t('panic.title')} style={{ flex: 'none', fontWeight: 700 }}>
-        <i className="ph ph-siren" />{!compact && <span>PANIC</span>}
-      </button>
+      {can(role, 'ack:alerts') && (
+        <button className="btn btn-danger" onClick={() => s.set({ panicOpen: true })} aria-label={t('panic.title')} title={t('panic.title')} style={{ flex: 'none', fontWeight: 700 }}>
+          <i className="ph ph-siren" />{!compact && <span>PANIC</span>}
+        </button>
+      )}
       <button onClick={() => s.set({ menuOpen: !s.menuOpen })} aria-label={t('account')} aria-expanded={s.menuOpen} title={t(`role.${role}`)}
         style={{ flex: 'none', width: 34, height: 34, borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent-line)', display: 'grid', placeItems: 'center' }}>
         <i className={`ph ph-${ROLE_ICON[role]}`} style={{ fontSize: 16 }} />
@@ -146,13 +149,18 @@ export function Shell() {
   const vp = useViewport();
   const s = useOps();
   const role = useSession((x) => x.role) ?? 'viewer';
+  const modes = visibleModes(role);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const st = useOps.getState();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); st.set({ paletteOpen: !st.paletteOpen, q: '' }); }
       else if (e.key === 'Escape') { st.closeOverlays(); if (st.picking) st.set({ picking: null }); }
-      else if (e.altKey && /^[1-6]$/.test(e.key)) { e.preventDefault(); st.set({ paletteOpen: false, layersOpen: false, sheet: 'insp' }); navigate(`/${MODES[+e.key - 1].id}`); }
+      else if (e.altKey && /^[1-6]$/.test(e.key)) {
+        const target = visibleModes(useSession.getState().role ?? 'viewer')[+e.key - 1];
+        if (!target) return;
+        e.preventDefault(); st.set({ paletteOpen: false, layersOpen: false, sheet: 'insp' }); navigate(`/${target.id}`);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -228,7 +236,7 @@ export function Shell() {
 
         {isMobile && (
           <nav aria-label={t('nav.workspaces')} style={{ gridArea: 'tabs', display: 'flex', alignItems: 'stretch', background: 'var(--surface)', boxShadow: 'inset 0 1px 0 var(--line)' }}>
-            {MODES.map((m) => (
+            {modes.map((m) => (
               <button key={m.id} aria-current={m.id === mode ? 'page' : undefined} onClick={() => { s.set({ sheet: 'insp' }); navigate(`/${m.id}`); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, color: m.id === mode ? 'var(--accent)' : 'var(--text-3)', minHeight: 44, fontSize: 10 }}>
                 <i className={`ph ph-${m.icon}`} style={{ fontSize: 20 }} />{t(`mode.${m.id}`)}
               </button>

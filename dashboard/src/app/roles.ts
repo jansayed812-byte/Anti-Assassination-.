@@ -2,13 +2,16 @@
  * Adaptive home: each role lands on its workspace and gets a "for you today" list derived from live data.
  */
 import type { AlertLevel, Role } from '../api/types';
-import type { Mode } from '../stores/ops';
-import { useOps } from '../stores/ops';
+import { MODES, useOps, type Mode } from '../stores/ops';
 import { pick, translate, type Lang } from '../i18n';
+import { can } from './permissions';
 
 export const CONSOLE_ROLES: Role[] = ['operator', 'analyst', 'planner', 'commander', 'technical'];
 export const ROLE_HOME: Record<Role, Mode> = { operator: 'live', commander: 'live', analyst: 'analysis', planner: 'planning', technical: 'assets', admin: 'admin', viewer: 'live' };
 export const ROLE_ICON: Record<Role, string> = { operator: 'headset', analyst: 'chart-line-up', planner: 'path', commander: 'star', technical: 'wrench', admin: 'shield-check', viewer: 'eye' };
+
+/** Workspace tabs this role may open — the Admin workspace needs `read:admin`, same as its API routes. */
+export const visibleModes = (role: Role | null) => MODES.filter((m) => m.id !== 'admin' || can(role, 'read:admin'));
 
 export interface RoleTask { text: string; mode: Mode; level: AlertLevel; tab?: 'alerts' | 'units'; plan?: string; dev?: string; zone?: string }
 

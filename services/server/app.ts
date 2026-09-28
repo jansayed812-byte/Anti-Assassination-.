@@ -135,6 +135,14 @@ export function createOpsServer(opts: ServerOptions) {
   const auth = jwtAuth(opts.jwtSecret);
   const scope = branchScope(ctxOf, hqId);
   const can = (p: string) => [auth, scope, requirePermission(p)];
+  // `scope` resolves req.ctx from the caller's active branch (or an explicit header/param they're allowed to read,
+  // which downgrades their role to viewer — see branchScope); a role check alone is not enough for state that is
+  // headquarters-wide rather than per-branch, since e.g. `technical` exists in every branch.
+  const hqOnly = (req: Request, res: Response, next: NextFunction): void => {
+    if (R(req).ctx.id !== hqId) { res.status(403).json({ error: 'only headquarters may perform this action', code: 'hq_only' }); return; }
+    next();
+  };
+  const canHq = (p: string) => [...can(p), hqOnly];
 
   api.get('/health', (_req, res) => { res.json({ status: 'ok', uptime_s: Math.round((Date.now() - startedAt) / 1000), branches: branchIds, seq: Object.fromEntries([...contexts].map(([id, c]) => [id, c.bus.currentSeq()])), clients: gateway.getClientCount() }); });
 
@@ -265,7 +273,7 @@ export function createOpsServer(opts: ServerOptions) {
   for (const action of ['acknowledge', 'resolve', 'escalate'] as const) {
     api.post(`/monitoring/alerts/:id/${action}`, ...can('ack:alerts'), wrap((req, res) => { res.json(R(req).ctx.alerts[action](req.params.id, by(req))); }));
   }
-  api.post('/monitoring/panic', auth, scope, wrap((req, res) => {
+  api.post('/monitoring/panic', ...can('ack:alerts'), wrap((req, res) => {
     const c = R(req).ctx, u = actor(req);
     if (c.id !== (R(req).user.branch ?? hqId)) return res.status(403).json({ error: 'panic must be raised in your active branch', code: 'branch_readonly' });
     const alpha = c.units.get('alpha');
@@ -398,7 +406,7 @@ export function createOpsServer(opts: ServerOptions) {
   // --- inter-branch sync
   api.get('/sync/status', ...can('read:alerts'), (req, res) => { res.json({ branch: R(req).branch, hq: hqId, status: hub.status() }); });
   api.get('/sync/feed', ...can('read:alerts'), (req, res) => { res.json({ branch: R(req).branch, items: hub.feed(R(req).branch) }); });
-  api.post('/sync/link', ...can('run:maintenance'), wrap((req, res) => {
+  api.post('/sync/link', ...canHq('run:maintenance'), wrap((req, res) => {
     const { branch, up } = req.body ?? {};
     if (typeof branch !== 'string' || !contexts.has(branch) || typeof up !== 'boolean') throw bad('bad_link', 'branch and up (boolean) are required');
     const st = hub.setLink(branch, up);
@@ -409,11 +417,11 @@ export function createOpsServer(opts: ServerOptions) {
   // --- operations & governance (headquarters-wide)
   api.get('/operations/sla/metrics', ...can('read:admin'), (_req, res) => { res.json({ metrics: admin.sla() }); });
   api.get('/operations/maintenance/tasks', ...can('read:admin'), (_req, res) => { res.json({ tasks: admin.maintenance() }); });
-  api.post('/operations/maintenance/:id/run', ...can('run:maintenance'), wrap((req, res) => { res.json(admin.runTask(req.params.id)); }));
+  api.post('/operations/maintenance/:id/run', ...canHq('run:maintenance'), wrap((req, res) => { res.json(admin.runTask(req.params.id)); }));
   api.get('/governance/compliance', ...can('read:admin'), (_req, res) => { res.json({ frameworks: admin.compliance(), data_classes: admin.dataClasses() }); });
   api.get('/advanced-security/keys', ...can('read:admin'), (_req, res) => { res.json({ keys: admin.keyList(), last_scan: admin.lastScanResult() }); });
-  api.post('/advanced-security/keys/:name/rotate', ...can('manage:keys'), wrap((req, res) => { res.json(admin.rotateKey(req.params.name)); }));
-  api.post('/advanced-security/scan', ...can('manage:keys'), (_req, res) => { res.json(admin.scan()); });
+  api.post('/advanced-security/keys/:name/rotate', ...canHq('manage:keys'), wrap((req, res) => { res.json(admin.rotateKey(req.params.name)); }));
+  api.post('/advanced-security/scan', ...canHq('manage:keys'), (_req, res) => { res.json(admin.scan()); });
   api.get('/training/programs', ...can('read:admin'), (_req, res) => { res.json({ programs: admin.training() }); });
 
   app.use('/api', api);

@@ -80,6 +80,30 @@ describe('SyncHub', () => {
     h.publish(env('KBL', 'a', 1), ['XYZ']);
     expect(h.status().every((s) => s.outbox === 0)).toBe(true);
   });
+
+  it('only stamps last_sync on an origin that actually delivered something in that flush', () => {
+    // A dedicated 4-branch hub, so the origin whose delivery fails (C) is nobody else's receiver in this round
+    // (receive() legitimately stamps last_sync on whoever gets a delivery, which would otherwise mask the bug).
+    let clock = 1_000;
+    const got: Array<[string, SyncEnvelope]> = [];
+    const h = new SyncHub(['A', 'B', 'C', 'D'], (target, e) => got.push([target, e]), () => clock++);
+    const mk = (origin: string, id: string) => ({ origin, kind: 'alert' as const, id, version: 1, payload: {} });
+
+    h.setLink('A', false); // pauses A's own outbox so its publish below queues instead of delivering immediately
+    h.setLink('D', false); // nothing can reach D
+    h.publish(mk('A', 'a1'), ['B']); // queues: A is paused
+    h.publish(mk('C', 'c1'), ['D']); // queues: C is up, but its target D is down
+    expect(h.status().find((s) => s.branch === 'C')!.last_sync).toBeNull();
+
+    // Re-enabling A flushes every origin in one pass: A→B delivers (B receives it), C→D still can't (D is down).
+    h.setLink('A', true);
+    const st = (b: string) => h.status().find((s) => s.branch === b)!;
+    expect(st('A').last_sync).not.toBeNull(); // A delivered
+    expect(st('C').last_sync).toBeNull(); // C delivered nothing this round and must stay unstamped
+    expect(st('C').sent).toBe(0);
+    expect(st('C').outbox).toBe(1); // the C→D envelope is still queued, not silently marked delivered
+    expect(got.map(([t, e]) => `${t}:${e.id}`)).toEqual(['B:a1']);
+  });
 });
 
 describe('UserDirectory', () => {

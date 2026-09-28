@@ -100,6 +100,7 @@ export class BlindSpotService extends EventEmitter {
 
     const scoreOf = new Map(grid.map((c) => [c.id, c.score]));
     const support = this.geo.pois.filter((p) => p.kind === 'police' || p.kind === 'hospital' || p.kind === 'hq');
+    const now = this.now();
     const zones: BlindSpotZone[] = [];
     for (const type of ['network', 'monitoring', 'access'] as BlindType[]) {
       const comps = this.components(byType[type]);
@@ -117,7 +118,7 @@ export class BlindSpotService extends EventEmitter {
           nearest_support: near ? { id: near.p.id, name: near.p.name, distance_m: Math.round(near.d) } : null,
           detail: this.detail(type, cells, centroid, radios, cams),
           mitigation: L(`bs.mit.${type}` as MsgKey, { near: near ? near.p.name : '—' }),
-          first_seen: this.firstSeen.get(id) ?? Date.now(),
+          first_seen: this.firstSeen.get(id) ?? now,
         });
       }
     }
@@ -126,7 +127,6 @@ export class BlindSpotService extends EventEmitter {
     const previous = this.zonesCache;
     // New / grown zones are judged against every cell that was blind in the last 15 minutes, not just the last
     // pass: a patrolling drone uncovers and re-covers the same ground constantly and must not raise alerts.
-    const now = this.now();
     const known = (type: BlindType, c: string) => { const t = this.recentBlind[type].get(c); return t !== undefined && now - t <= RECENT_MS; };
     const fresh: BlindSpotZone[] = [];
     const grown: BlindSpotGrowth[] = [];

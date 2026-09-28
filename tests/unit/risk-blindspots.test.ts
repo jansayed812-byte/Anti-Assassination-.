@@ -170,6 +170,16 @@ describe('BlindSpotService', () => {
     expect(cells.has(latLngToCell(MZR.center.lat, MZR.center.lon, H3_RES))).toBe(false);
   });
 
+  it('stamps a new zone\'s first_seen from the injected clock, not the wall clock', () => {
+    let clock = 1_000_000; // far from Date.now(), so a leftover Date.now() call would be obvious
+    const { svc } = setup([], [], () => clock);
+    const [zone] = svc.recompute().filter((z) => z.type === 'network');
+    expect(zone.first_seen).toBe(1_000_000);
+    clock = 2_000_000; // recompute() again later: first_seen for the same zone must not move
+    const [again] = svc.recompute().filter((z) => z.type === 'network');
+    expect(again.first_seen).toBe(1_000_000);
+  });
+
   it('builds contiguous zones with a report in three languages', () => {
     const devices = [relay('R1', offset(MZR.center, -2500, 0)), relay('R2', offset(MZR.center, 2500, 0))];
     const { risk, svc } = setup(devices, [{ plan: 'ESC-1', route: 'P', path: [offset(MZR.center, -6000, 0), offset(MZR.center, 6000, 0)] }]);

@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSession } from './stores/session';
-import { useOps, MODES } from './stores/ops';
-import { ROLE_HOME } from './app/roles';
+import { useOps } from './stores/ops';
+import { ROLE_HOME, visibleModes } from './app/roles';
 import { bootstrap } from './app/actions';
 import { disconnectStream } from './realtime/streams';
 import { Shell } from './app/Shell';
@@ -30,7 +30,8 @@ function Home() {
 
 function ModeGuard() {
   const mode = useMode();
-  return MODES.some((m) => m.id === mode) ? <Authed /> : <Navigate to="/" replace />;
+  const role = useSession((s) => s.role);
+  return visibleModes(role).some((m) => m.id === mode) ? <Authed /> : <Navigate to="/" replace />;
 }
 
 export default function App() {

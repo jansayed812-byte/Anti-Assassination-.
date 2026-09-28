@@ -51,17 +51,19 @@ export class SyncHub extends EventEmitter {
     let delivered = 0;
     for (const [origin, queue] of this.outbox) {
       if (!this.links.get(origin) || !queue.length) continue;
+      let deliveredHere = 0;
       for (const item of queue) {
         for (const target of [...item.targets]) {
           if (!this.links.get(target)) continue;
           this.receive(target, item.env);
           item.targets.delete(target);
           this.stats.get(origin)!.sent++;
-          delivered++;
+          deliveredHere++;
         }
       }
       this.outbox.set(origin, queue.filter((i) => i.targets.size > 0));
-      if (delivered) this.stats.get(origin)!.last_sync = this.now();
+      if (deliveredHere) this.stats.get(origin)!.last_sync = this.now();
+      delivered += deliveredHere;
     }
     if (delivered) this.emit('status', this.status());
     return delivered;

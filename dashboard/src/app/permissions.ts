@@ -1,6 +1,7 @@
 import type { Role } from '../api/types';
-/** UI affordances only — mirrors services/auth/auth-middleware.ts; the server enforces the real check. */
-const READ = ['read:positions', 'read:incidents', 'read:alerts', 'read:plans', 'read:scenarios', 'read:devices', 'read:admin'];
+/** UI affordances only — mirrors services/auth/auth-middleware.ts; the server enforces the real check.
+ * `read:admin` is deliberately not in the base READ set — see that file for why. */
+const READ = ['read:positions', 'read:incidents', 'read:alerts', 'read:plans', 'read:scenarios', 'read:devices'];
 const PERMS: Record<Role, string[]> = {
   viewer: READ,
   operator: [...READ, 'write:incidents', 'ack:alerts', 'write:alerts', 'command:devices', 'run:scenarios', 'switch:route'],

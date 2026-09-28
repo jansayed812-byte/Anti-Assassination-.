@@ -2,7 +2,7 @@
  * Phase 10: Auth Middleware
  */
 import { Request, Response, NextFunction } from 'express';
-import { createHash, createHmac } from 'crypto';
+import { createHash, createHmac, timingSafeEqual } from 'crypto';
 
 export type Role = 'viewer' | 'operator' | 'analyst' | 'planner' | 'commander' | 'technical' | 'admin';
 
@@ -13,7 +13,11 @@ export type Role = 'viewer' | 'operator' | 'analyst' | 'planner' | 'commander' |
 export interface JWTClaims { sub: string; name: string; role: Role; exp: number; iat: number; branch?: string; branches?: string[]; scope?: 'branch' | 'regional' }
 export interface AuditEntry { user_id: string; action: string; resource: string; ip: string; at: string; result: 'allow' | 'deny'; chain_hash: string; }
 
-const READ = ['read:positions', 'read:incidents', 'read:alerts', 'read:plans', 'read:scenarios', 'read:devices', 'read:admin'];
+// `read:admin` (audit log, user directory, SLA/maintenance/compliance/keys) is deliberately kept out of the base
+// READ set: every other permission there is safe for a read-only viewer (including a regional user's downgraded
+// view of a branch they don't hold a role in), but the admin surface exposes IPs, usernames and key material and
+// is granted only to the `admin` role below.
+const READ = ['read:positions', 'read:incidents', 'read:alerts', 'read:plans', 'read:scenarios', 'read:devices'];
 const PERMISSIONS: Record<Role, Set<string>> = {
   viewer:    new Set(READ),
   operator:  new Set([...READ, 'write:incidents', 'ack:alerts', 'write:alerts', 'command:devices', 'run:scenarios', 'switch:route']),
@@ -32,9 +36,10 @@ export function verifyJWT(token: string, secret: string): JWTClaims | null {
     if (parts.length !== 3) return null;
     const [header, payload, sig] = parts;
     const expected = createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
-    if (sig !== expected) return null;
+    const given = Buffer.from(sig), want = Buffer.from(expected);
+    if (given.length !== want.length || !timingSafeEqual(given, want)) return null;
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as JWTClaims;
-    if (claims.exp < Math.floor(Date.now() / 1000)) return null;
+    if (!Number.isFinite(claims.exp) || claims.exp < Math.floor(Date.now() / 1000)) return null;
     return claims;
   } catch { return null; }
 }
