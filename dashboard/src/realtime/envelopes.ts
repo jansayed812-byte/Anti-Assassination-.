@@ -20,7 +20,7 @@ export class EnvelopeTracker {
   reset(): void { this.lastSeq = 0; this.seen.clear(); this.order = []; }
 }
 
-export interface QueuedAction { id: string; method: 'POST' | 'PATCH'; path: string; body?: unknown; queued_at: number }
+export interface QueuedAction { id: string; method: 'POST' | 'PATCH' | 'PUT'; path: string; body?: unknown; queued_at: number }
 
 /** Mutations made while disconnected, replayed in order once the link is back (capped like the edge buffer). */
 export class Outbox {

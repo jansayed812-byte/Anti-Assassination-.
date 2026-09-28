@@ -1,42 +1,49 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../app/hooks';
-import { useOps } from '../stores/ops';
-import { login } from '../app/actions';
+import { errorText, loadConfig, login } from '../app/actions';
+import { ApiError } from '../api/client';
+import { LanguageSwitcher } from '../ui/Switchers';
+import { usePrefs } from '../stores/prefs';
+import { setTheme } from '../app/actions';
 
 export function Login() {
-  const { t, lang } = useT();
+  const { t } = useT();
   const navigate = useNavigate();
-  const setLang = useOps((s) => s.set);
-  const [username, setUsername] = useState('maryam');
+  const theme = usePrefs((s) => s.theme);
+  const [username, setUsername] = useState('ahmadi');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { document.documentElement.lang = lang; document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr'; }, [lang]);
+  useEffect(() => { void loadConfig(); }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError('');
     try { await login(username.trim(), password); navigate('/', { replace: true }); }
-    catch (err) { setError(err instanceof Error ? err.message : t('login.error')); }
+    catch (err) { setError(err instanceof ApiError && err.status === 401 ? t('login.error') : errorText(err)); }
     finally { setBusy(false); }
   };
 
   return (
-    <div dir={lang === 'fa' ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', background: 'var(--color-bg)', color: 'var(--color-text)', fontFamily: 'Inter, Vazirmatn, system-ui, sans-serif', fontSize: 13, padding: 16 }}>
-      <form onSubmit={submit} style={{ width: 360, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 14, padding: 24, borderRadius: 14, background: 'var(--color-surface)', boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 34, height: 34, borderRadius: 8, boxShadow: 'inset 0 0 0 1px var(--color-accent)', display: 'grid', placeItems: 'center', color: 'var(--color-accent)', fontSize: 18 }}><i className="ph ph-shield-chevron" /></span>
-          <div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ fontWeight: 500, fontSize: 16 }}>{t('brand')}</span><span className="caption">{t('login.title')}</span></div>
-          <span style={{ flex: 1 }} />
-          <button type="button" className="btn-outline" onClick={() => setLang({ lang: lang === 'fa' ? 'en' : 'fa' })}>{lang === 'fa' ? 'EN' : 'فا'}</button>
+    <div style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', padding: 16, overflowY: 'auto',
+      background: 'radial-gradient(1200px 600px at 20% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent), radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--friendly) 12%, transparent), transparent), var(--bg)' }}>
+      <div className="row" style={{ position: 'absolute', top: 14, insetInlineEnd: 14, gap: 8 }}>
+        <LanguageSwitcher />
+        <button className="btn btn-icon" aria-label={t('theme')} title={t('theme')} onClick={() => void setTheme(theme === 'dark' ? 'light' : 'dark')}><i className={`ph ph-${theme === 'dark' ? 'sun' : 'moon'}`} /></button>
+      </div>
+      <form onSubmit={submit} className="card" aria-labelledby="login-title" style={{ width: 400, maxWidth: '100%', gap: 14, padding: 26, boxShadow: 'var(--shadow-3)' }}>
+        <div className="row" style={{ gap: 12 }}>
+          <span style={{ width: 42, height: 42, borderRadius: 10, background: 'var(--accent)', color: 'var(--accent-ink)', display: 'grid', placeItems: 'center', fontSize: 22 }}><i className="ph ph-shield-chevron" /></span>
+          <div className="col" style={{ gap: 0 }}><h1 id="login-title" style={{ fontSize: 19 }}>{t('brand')}</h1><span className="caption">{t('login.title')}</span></div>
         </div>
-        <label className="field-label">{t('login.username')}<input className="field-input ltr" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required /></label>
-        <label className="field-label">{t('login.password')}<input className="field-input ltr" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus /></label>
-        {error && <span role="alert" style={{ color: 'oklch(0.82 0.12 25)', fontSize: 12 }}>{error}</span>}
-        <button type="submit" className="btn-primary-fill" disabled={busy}>{busy ? <i className="ph ph-spinner spin" /> : <i className="ph ph-sign-in" />}{t('login.submit')}</button>
-        <span style={{ fontSize: 11.5, color: 'var(--color-neutral-400)', lineHeight: 1.7 }}>{t('login.demo')}</span>
+        <label className="field">{t('login.username')}<input className="input ltr" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required name="username" /></label>
+        <label className="field">{t('login.password')}<input className="input ltr" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus name="password" /></label>
+        {error && <span role="alert" style={{ color: 'var(--danger)', fontSize: 12.5 }}>{error}</span>}
+        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>{busy ? <i className="ph ph-spinner spin" /> : <i className="ph ph-sign-in" />}{t('login.submit')}</button>
+        <span className="caption" style={{ lineHeight: 1.8 }}>{t('login.demo')}</span>
+        <span className="chip chip-info" style={{ alignSelf: 'flex-start', whiteSpace: 'normal' }}><i className="ph ph-info" />{t('exercise.note')}</span>
       </form>
     </div>
   );

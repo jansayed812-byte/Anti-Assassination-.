@@ -486,8 +486,13 @@ export function createOpsServer(opts: ServerOptions) {
       hub.flush();
     }, 1000));
     // Risk grid heartbeat and a periodic blind-spot refresh (the escort drone's footprint moves).
-    timers.push(setInterval(() => { for (const c of contexts.values()) { c.bus.publish('risk', { version: c.risk.version, cells: c.risk.grid(), incidents: c.risk.list() }); c.blind.schedule(); } }, 10_000));
-    for (const c of contexts.values()) c.risk.on('changed', () => c.bus.publish('risk', { version: c.risk.version, cells: c.risk.grid(), incidents: c.risk.list() }));
+    // Risk envelopes carry the grid version and incidents; clients refetch the grid (REST) when the version moves.
+    const riskEnv = (c: BranchContext) => c.bus.publish('risk', { version: c.risk.version, incidents: c.risk.list() });
+    timers.push(setInterval(() => { for (const c of contexts.values()) { riskEnv(c); c.blind.schedule(); } }, 10_000));
+    for (const c of contexts.values()) {
+      let pending: ReturnType<typeof setTimeout> | null = null;
+      c.risk.on('changed', () => { if (!pending) pending = setTimeout(() => { pending = null; riskEnv(c); }, 250); });
+    }
     httpServer.listen(port, host, () => { const a = httpServer.address(); resolve(typeof a === 'object' && a ? a.port : port); });
   });
   const stop = async () => {

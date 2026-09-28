@@ -25,7 +25,8 @@ const count = <T>(xs: T[], key: (x: T) => string) => xs.reduce<Record<string, nu
 export function branchSummary(ctx: BranchContext, opts: { from?: number; to?: number; by: string; sync?: SyncBranchStatus | null }): BranchSummary {
   const to = opts.to ?? Date.now(), from = opts.from ?? to - 24 * 3600_000;
   const alerts = ctx.alerts.list().filter((a) => { const t0 = Date.parse(a.created_at); return t0 >= from && t0 <= to; });
-  const ackTimes = alerts.flatMap((a) => {
+  // Time from raising to the first ACK; alerts that arrived already acknowledged (imports, replicas) are left out.
+  const ackTimes = alerts.filter((a) => a.history[0]?.status !== 'acknowledged').flatMap((a) => {
     const ack = a.history.find((h) => h.status === 'acknowledged');
     return ack ? [(Date.parse(ack.at) - Date.parse(a.created_at)) / 1000] : [];
   }).sort((a, b) => a - b);
@@ -54,7 +55,7 @@ const WORDS: Record<string, Tri> = {
   high: { dr: 'بلند', ps: 'لوړ', en: 'High' }, medium: { dr: 'متوسط', ps: 'منځنی', en: 'Medium' }, low: { dr: 'پایین', ps: 'ټیټ', en: 'Low' },
   active: { dr: 'فعال', ps: 'فعال', en: 'Active' }, acknowledged: { dr: 'تأیید شده', ps: 'تایید شوی', en: 'Acknowledged' }, escalated: { dr: 'ارتقا یافته', ps: 'لوړ شوی', en: 'Escalated' }, resolved: { dr: 'حل شده', ps: 'حل شوی', en: 'Resolved' },
   running: { dr: 'در جریان', ps: 'روان', en: 'Running' }, pending_approval: { dr: 'منتظر تأیید', ps: 'تایید ته انتظار', en: 'Pending approval' }, approved: { dr: 'تأیید شده', ps: 'تایید شوی', en: 'Approved' }, closed: { dr: 'بسته', ps: 'تړل شوی', en: 'Closed' }, draft: { dr: 'مسوده', ps: 'مسوده', en: 'Draft' },
-  network: { dr: 'بدون شبکه', ps: 'بې شبکې', en: 'No network' }, monitoring: { dr: 'فاقد پایش', ps: 'بې څارنې', en: 'Unmonitored' }, access: { dr: 'دسترسی محدود', ps: 'محدود لاسرسی', en: 'Limited access' },
+  network: { dr: 'بدون شبکه', ps: 'بې شبکې', en: 'No network' }, monitoring: { dr: 'بدون نظارت', ps: 'بې څارنې', en: 'Unmonitored' }, access: { dr: 'دسترسی محدود', ps: 'محدود لاسرسی', en: 'Limited access' },
   online: { dr: 'آنلاین', ps: 'آنلاین', en: 'Online' }, offline: { dr: 'آفلاین', ps: 'آفلاین', en: 'Offline' }, low_battery: { dr: 'بتری کم', ps: 'ټیټه بېټري', en: 'Low battery' },
   area_km2: { dr: 'مساحت (کیلومتر مربع)', ps: 'مساحت (مربع کیلومتره)', en: 'Area (km²)' }, crossing_routes: { dr: 'روی مسیر فعال', ps: 'په فعاله لاره کې', en: 'On an active route' },
   edited_routes: { dr: 'مسیرهای ویرایش‌شده', ps: 'سمې شوې لارې', en: 'Edited routes' }, cells: { dr: 'خانه‌های شبکهٔ ریسک', ps: 'د خطر شبکې خانې', en: 'Risk grid cells' }, max_score: { dr: 'بیشترین نمرهٔ ریسک', ps: 'د خطر تر ټولو لوړه نمره', en: 'Highest risk score' },

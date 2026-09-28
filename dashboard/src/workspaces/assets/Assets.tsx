@@ -2,51 +2,50 @@ import { useState } from 'react';
 import { useOps } from '../../stores/ops';
 import { useSession } from '../../stores/session';
 import { useNow, useT } from '../../app/hooks';
-import { clock, fg } from '../../lib/format';
 import { registerDevice, sendCommand } from '../../app/actions';
 import type { Device, DeviceType } from '../../api/types';
 import { can } from '../../app/roles';
+import { relayReachM } from '../../map/geo';
 
-const ICON: Record<DeviceType, string> = { drone: 'drone', gps: 'navigation-arrow', iot: 'broadcast', camera: 'security-camera', ble: 'bluetooth' };
-const STATE_HUE: Record<Device['state'], number> = { on: 150, idle: 250, warn: 90, off: 25 };
-const TYPES: DeviceType[] = ['drone', 'gps', 'iot', 'camera', 'ble'];
+const ICON: Record<DeviceType, string> = { drone: 'drone', relay: 'broadcast', gps: 'navigation-arrow', iot: 'cpu', camera: 'security-camera', ble: 'bluetooth' };
+const STATE_CHIP: Record<Device['state'], string> = { on: 'chip-success', idle: 'chip-info', warn: 'chip-warning', off: 'chip-danger' };
+const TYPES: DeviceType[] = ['drone', 'relay', 'camera', 'gps', 'iot', 'ble'];
 
 export function AssetsList({ showApi }: { showApi: boolean }) {
-  const { t, N } = useT();
+  const { t, x, N } = useT();
   const s = useOps();
-  const role = useSession((x) => x.role);
+  const role = useSession((st) => st.role);
   const [reg, setReg] = useState<null | { id: string; name: string; type: DeviceType; protocol: string }>(null);
   const list = s.devices.filter((d) => s.devFilter === 'all' || d.type === s.devFilter);
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 500, fontSize: 14 }}>{t('dv.title', { n: N(s.devices.length) })}</span>
-        {can(role, 'write:devices') && <button className="btn-accent-outline" onClick={() => setReg(reg ? null : { id: '', name: '', type: 'iot', protocol: 'MQTT' })}><i className="ph ph-plus" />{t('dv.register')}</button>}
+      <div className="row-between">
+        <h3>{t('dv.title', { n: s.devices.length })}</h3>
+        {can(role, 'write:devices') && <button className="btn btn-outline btn-sm" onClick={() => setReg(reg ? null : { id: '', name: '', type: 'iot', protocol: 'MQTT' })}><i className="ph ph-plus" />{t('dv.register')}</button>}
       </div>
       {reg && (
-        <form onSubmit={(e) => { e.preventDefault(); registerDevice(reg); setReg(null); }} style={{ borderRadius: 12, padding: 12, background: 'var(--color-bg)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontWeight: 500 }}>{t('dv.registerTitle')}</span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <label className="field-label">{t('dv.id')}<input required className="field-input mono ltr" style={{ background: 'var(--color-surface)' }} value={reg.id} onChange={(e) => setReg({ ...reg, id: e.target.value.toUpperCase() })} /></label>
-            <label className="field-label">{t('dv.type')}<select className="field-input" style={{ background: 'var(--color-surface)' }} value={reg.type} onChange={(e) => setReg({ ...reg, type: e.target.value as DeviceType })}>{TYPES.map((x) => <option key={x} value={x}>{t(`dv.type.${x}`)}</option>)}</select></label>
+        <form className="card-2" onSubmit={(e) => { e.preventDefault(); registerDevice(reg); setReg(null); }}>
+          <b>{t('dv.registerTitle')}</b>
+          <div className="grid-2">
+            <label className="field">{t('dv.id')}<input required className="input mono ltr" value={reg.id} onChange={(e) => setReg({ ...reg, id: e.target.value.toUpperCase() })} /></label>
+            <label className="field">{t('dv.type')}<select className="select" value={reg.type} onChange={(e) => setReg({ ...reg, type: e.target.value as DeviceType })}>{TYPES.map((k) => <option key={k} value={k}>{t(`dv.type.${k}`)}</option>)}</select></label>
           </div>
-          <label className="field-label">{t('dv.name')}<input required className="field-input" style={{ background: 'var(--color-surface)' }} value={reg.name} onChange={(e) => setReg({ ...reg, name: e.target.value })} /></label>
-          <label className="field-label">{t('dv.protocol')}<input required className="field-input ltr" style={{ background: 'var(--color-surface)' }} value={reg.protocol} onChange={(e) => setReg({ ...reg, protocol: e.target.value })} /></label>
-          <div style={{ display: 'flex', gap: 6 }}><button type="submit" className="btn-primary-fill" style={{ flex: 1 }}>{t('dv.register')}</button><button type="button" className="btn-outline" onClick={() => setReg(null)}>{t('dv.cancel')}</button></div>
+          <label className="field">{t('dv.name')}<input required className="input" value={reg.name} onChange={(e) => setReg({ ...reg, name: e.target.value })} /></label>
+          <label className="field">{t('dv.protocol')}<input required className="input ltr" value={reg.protocol} onChange={(e) => setReg({ ...reg, protocol: e.target.value })} /></label>
+          <div className="row" style={{ gap: 6 }}><button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{t('dv.register')}</button><button type="button" className="btn" onClick={() => setReg(null)}>{t('cancel')}</button></div>
         </form>
       )}
       {showApi && <span className="api-hint">GET /api/communication/devices · WS env/devices</span>}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <div className="row wrap" style={{ gap: 6 }}>
         {(['all', ...TYPES] as const).map((k) => (
-          <button key={k} aria-pressed={s.devFilter === k} onClick={() => s.set({ devFilter: k })} style={{ padding: '4px 10px', borderRadius: 6, background: s.devFilter === k ? 'var(--color-accent-800)' : 'var(--color-neutral-800)', color: s.devFilter === k ? 'var(--color-accent-100)' : 'var(--color-neutral-300)' }}>{t(`dv.f.${k}`)}</button>
+          <button key={k} className={`btn btn-sm ${s.devFilter === k ? 'on' : ''}`} aria-pressed={s.devFilter === k} onClick={() => s.set({ devFilter: k })}>{k === 'all' ? t('dv.f.all') : t(`dv.type.${k}`)}</button>
         ))}
       </div>
       {list.map((d) => (
-        <button key={d.id} className="hov-accent" onClick={() => s.set({ devSel: d.id, sheet: 'insp' })}
-          style={{ textAlign: 'start', padding: '9px 10px', borderRadius: 8, background: d.id === s.devSel ? 'var(--color-accent-900)' : 'transparent', display: 'flex', gap: 10, alignItems: 'center' }}>
-          <i className={`ph ph-${ICON[d.type]}`} style={{ fontSize: 18, color: 'var(--color-neutral-400)' }} />
-          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}><span style={{ fontWeight: 500 }}>{d.name}</span><span style={{ fontSize: 11, color: 'var(--color-neutral-400)' }}>{d.protocol} · {d.detail}</span></span>
-          <span style={{ fontSize: 11, color: fg(STATE_HUE[d.state]), whiteSpace: 'nowrap' }}>{t(`dv.state.${d.state}`)}</span>
+        <button key={d.id} className="list-item" aria-current={d.id === s.devSel} onClick={() => { s.set({ devSel: d.id, sheet: 'insp' }); if (d.geo) s.flyTo(d.geo, d.type === 'relay' ? 12.5 : d.type === 'drone' ? 14 : 15.5); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} data-testid={`device-${d.id}`}>
+          <i className={`ph ph-${ICON[d.type]}`} style={{ fontSize: 18, color: 'var(--text-3)' }} />
+          <span className="col" style={{ gap: 1, flex: 1, minWidth: 0 }}><b className="truncate">{x(d.name)}</b><span className="caption truncate">{x(d.detail).includes(d.protocol) ? N(x(d.detail)) : `${d.protocol} · ${N(x(d.detail))}`}</span></span>
+          <span className={`chip ${STATE_CHIP[d.state]}`}>{t(`dv.state.${d.state}`)}</span>
         </button>
       ))}
     </>
@@ -54,39 +53,40 @@ export function AssetsList({ showApi }: { showApi: boolean }) {
 }
 
 export function AssetsInspector({ showApi }: { showApi: boolean }) {
-  const { t, N } = useT();
+  const { t, x, N, D, F, clock } = useT();
   const now = useNow(5000);
   const s = useOps();
-  const role = useSession((x) => x.role);
-  const d = s.devices.find((x) => x.id === s.devSel) ?? s.devices[0];
+  const role = useSession((st) => st.role);
+  const d = s.devices.find((q) => q.id === s.devSel) ?? s.devices[0];
   if (!d) return <span className="muted">{t('loading')}</span>;
   const ago = Math.max(0, now - d.last_seen);
-  const seen = ago < 60_000 ? t('dv.now') : ago < 3600_000 ? t('dv.agoMin', { n: N(Math.round(ago / 60_000)) }) : t('dv.agoH', { n: N(Math.round(ago / 3600_000)) });
+  const seen = ago < 60_000 ? t('dv.now') : ago < 3600_000 ? t('dv.agoMin', { n: Math.round(ago / 60_000) }) : t('dv.agoH', { n: Math.round(ago / 3600_000) });
   const metrics: Array<[string, string, string?]> = [
-    [t('dv.id'), d.id], [t('dv.protocol'), d.protocol], [t('dv.battery'), d.battery_pct == null ? '—' : `${N(Math.round(d.battery_pct))}٪`, d.battery_pct != null && d.battery_pct < 15 ? fg(25) : undefined],
-    [t('dv.lastSignal'), seen, d.state === 'off' ? fg(25) : undefined], [t('dv.firmware'), d.firmware], [t('dv.signal'), d.signal_dbm == null ? '—' : `${N(d.signal_dbm)} dBm`],
+    [t('dv.id'), d.id], [t('dv.protocol'), d.protocol], [t('dv.battery'), d.battery_pct == null ? '—' : t('unit.pct', { n: Math.round(d.battery_pct) }), d.battery_pct != null && d.battery_pct < 20 ? 'var(--danger)' : undefined],
+    [t('dv.lastSignal'), seen, d.state === 'off' ? 'var(--danger)' : undefined], [t('dv.firmware'), d.firmware], [t('dv.signal'), d.signal_dbm == null ? '—' : t('unit.dbm', { n: d.signal_dbm })],
   ];
+  const cov = d.coverage;
+  const covText = !cov ? null : cov.kind === 'camera' ? t('dv.cov.camera', { h: cov.heading_deg, f: cov.fov_deg, r: D(cov.range_m) })
+    : cov.kind === 'radio' ? t('dv.cov.radio', { tx: cov.tx_dbm, g: cov.gain_db, r: D(relayReachM(cov.tx_dbm, cov.gain_db)) }) : t('dv.cov.drone', { r: D(cov.footprint_m) });
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}><span className="caption">{t(`dv.type.${d.type}`)}</span><span style={{ fontSize: 17, fontWeight: 500 }}>{d.name}</span></div>
-        <span style={{ fontSize: 11, color: fg(STATE_HUE[d.state]) }}>{t(`dv.state.${d.state}`)}</span>
+      <div className="row-between" style={{ alignItems: 'flex-start' }}>
+        <div className="col" style={{ gap: 0 }}><span className="caption">{t(`dv.type.${d.type}`)}</span><h2 style={{ fontSize: 18 }}>{x(d.name)}</h2></div>
+        <span className={`chip ${STATE_CHIP[d.state]}`}>{t(`dv.state.${d.state}`)}</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {metrics.map(([l, v, c]) => <div key={l} className="tile"><div className="caption">{l}</div><div style={{ fontSize: 14, fontWeight: 500, color: c ?? 'inherit' }}>{v}</div></div>)}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="grid-2">{metrics.map(([l, v, c]) => <div key={l} className="tile"><div className="caption">{l}</div><div style={{ fontWeight: 600, color: c ?? 'inherit' }} className="num">{v}</div></div>)}</div>
+      <div className="tile"><div className="caption">{t('m.position')}</div><div className="mono ltr" style={{ fontSize: 12.5 }}>{d.geo ? `${F(d.geo.lat, 6)}, ${F(d.geo.lon, 6)}` : t('dv.noGeo')}</div></div>
+      {covText && <div className="card-2"><span className="caption">{t('dv.coverage')}</span><span>{covText}</span></div>}
+      <div className="col" style={{ gap: 6 }}>
         <span className="caption">{t('dv.cmd')}</span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {d.commands.map((c) => <button key={c} className="btn-outline" disabled={d.state === 'off' || !can(role, 'command:devices')} onClick={() => sendCommand(d, c)} style={{ padding: '7px 12px', borderRadius: 8 }}>{c}</button>)}
+        <div className="row wrap" style={{ gap: 6 }}>
+          {d.commands.map((c) => <button key={c.id} className={`btn btn-sm ${c.id === 'dev.cmd.power' ? (d.state === 'off' ? 'btn-outline' : 'btn-danger') : ''}`} disabled={(d.state === 'off' && c.id !== 'dev.cmd.power') || !can(role, 'command:devices')} onClick={() => sendCommand(d, c.id, x(c.label))} data-testid={`cmd-${c.id}`}>{x(c.label)}</button>)}
         </div>
-        {showApi && <span className="api-hint" style={{ textAlign: 'start' }}>POST /api/communication/command/{d.id}</span>}
+        {showApi && <span className="api-hint">POST /api/communication/command/{d.id}</span>}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="col" style={{ gap: 6 }}>
         <span className="caption">{t('dv.history')}</span>
-        {d.history.map((e, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 8, fontSize: 12 }}><span className="mono ltr" style={{ color: 'var(--color-neutral-500)', textAlign: 'start' }}>{clock(e.at)}</span><span>{e.message}</span></div>
-        ))}
+        {d.history.map((e, i) => <div key={i} style={{ display: 'grid', gridTemplateColumns: '48px 1fr', gap: 8, fontSize: 12 }}><span className="mono faint">{clock(e.at)}</span><span>{N(x(e.message))}</span></div>)}
       </div>
     </>
   );

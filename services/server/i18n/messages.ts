@@ -16,11 +16,11 @@ const M = {
   'alert.blindSpot': tri('نقطهٔ کور جدید: {id} ({type})', 'نوی ړوند ټکی: {id} ({type})', 'New blind spot: {id} ({type})'),
   'alert.blindSpot.src': tri('{area} کیلومتر مربع · نزدیک {near}', '{area} مربع کیلومتره · {near} ته نږدې', '{area} km² · near {near}'),
   'alert.deviceOffline': tri('{device} آفلاین شد', '{device} آفلاین شو', '{device} went offline'),
-  'alert.sync': tri('همگام‌سازی از {branch}: {title}', 'له {branch} څخه همغږي: {title}', 'Synced from {branch}: {title}'),
+  'alert.sync': tri('هماهنگ‌سازی از {branch}: {title}', 'له {branch} څخه همغږي: {title}', 'Synced from {branch}: {title}'),
 
   // blind spots
   'bs.type.network': tri('بدون پوشش شبکه', 'د شبکې پوښښ نشته', 'No network coverage'),
-  'bs.type.monitoring': tri('فاقد پایش', 'بې څارنې', 'Unmonitored'),
+  'bs.type.monitoring': tri('بدون نظارت', 'بې څارنې', 'Unmonitored'),
   'bs.type.access': tri('دسترسی محدود', 'محدود لاسرسی', 'Limited access'),
   'bs.mit.network': tri('یک رله یا ریپیتر سیار نزدیک {near} مستقر شود', 'د {near} سره نږدې یو ګرځنده ریلې ځای پر ځای شي', 'Deploy a mobile relay near {near}'),
   'bs.mit.monitoring': tri('گشت درون یا کمرهٔ ثابت در این ساحه تعیین شود', 'په دې سیمه کې د ډرون ګزمه یا ثابته کمره وټاکل شي', 'Assign a drone patrol or install a fixed camera here'),
@@ -91,7 +91,7 @@ const M = {
   'rep.blindSpots': tri('نقاط کور', 'ړانده ټکي', 'Blind spots'),
   'rep.devices': tri('سلامت دستگاه‌ها', 'د وسیلو روغتیا', 'Device health'),
   'rep.sims': tri('تمرین‌های شبیه‌سازی', 'د شبیه‌سازۍ تمرینونه', 'Simulation exercises'),
-  'rep.sync': tri('همگام‌سازی بین شعب', 'د څانګو ترمنځ همغږي', 'Inter-branch sync'),
+  'rep.sync': tri('هماهنگ‌سازی بین شعبه‌ها', 'د څانګو ترمنځ همغږي', 'Inter-branch sync'),
   'rep.generated': tri('تهیه‌شده در {at} توسط {by}', 'په {at} کې د {by} له خوا چمتو شوی', 'Generated {at} by {by}'),
   'rep.metric': tri('شاخص', 'شاخص', 'Metric'),
   'rep.value': tri('مقدار', 'ارزښت', 'Value'),

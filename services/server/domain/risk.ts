@@ -19,7 +19,8 @@ export interface RiskFactors { threat: number; severity: number; likelihood: num
 export interface RiskCell { id: string; lat: number; lon: number; score: number; level: RiskLevel; restricted: boolean; factors: RiskFactors }
 export interface RankedSite { rank: number; cell: string; lat: number; lon: number; score: number; level: RiskLevel; factors: RiskFactors; nearest: { id: string; name: Poi['name']; distance_m: number } | null }
 
-export const levelOf = (score: number): RiskLevel => (score >= 0.6 ? 'critical' : score >= 0.35 ? 'high' : score >= 0.05 ? 'medium' : 'low');
+/** Level bands. Context alone (support distance + coverage gap) tops out at 0.065, so "medium" and above always involve incident threat. */
+export const levelOf = (score: number): RiskLevel => (score >= 0.6 ? 'critical' : score >= 0.35 ? 'high' : score >= 0.1 ? 'medium' : 'low');
 const SUPPORT_KINDS = new Set(['police', 'hospital', 'hq']);
 
 export class RiskModel extends EventEmitter {

@@ -7,9 +7,10 @@ import { bootstrap } from './app/actions';
 import { disconnectStream } from './realtime/streams';
 import { Shell } from './app/Shell';
 import { Login } from './pages/Login';
-import { useMode } from './app/hooks';
+import { useMode, useT } from './app/hooks';
 
 function Authed() {
+  const { t } = useT();
   const token = useSession((s) => s.session?.access_token);
   const loaded = useOps((s) => s.loaded);
   useEffect(() => {
@@ -18,7 +19,7 @@ function Authed() {
     return () => { if (!useSession.getState().session) disconnectStream(); };
   }, [token]);
   if (!token) return <Navigate to="/login" replace />;
-  if (!loaded) return <div style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', background: 'var(--color-bg)', color: 'var(--color-neutral-400)' }}><i className="ph ph-spinner spin" style={{ fontSize: 22 }} /></div>;
+  if (!loaded) return <div role="status" style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-3)' }}><span><i className="ph ph-spinner spin" /> {t('loading')}</span></div>;
   return <Shell />;
 }
 
@@ -29,8 +30,7 @@ function Home() {
 
 function ModeGuard() {
   const mode = useMode();
-  const valid = MODES.some((m) => m.id === mode);
-  return valid ? <Authed /> : <Navigate to="/" replace />;
+  return MODES.some((m) => m.id === mode) ? <Authed /> : <Navigate to="/" replace />;
 }
 
 export default function App() {
