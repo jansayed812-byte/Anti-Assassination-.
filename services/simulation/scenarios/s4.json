@@ -1,0 +1,137 @@
+{
+  "id": "s4",
+  "name": {
+    "dr": "نفوذ به ساحهٔ ممنوعه",
+    "ps": "منع شوې سیمې ته ننوتل",
+    "en": "Restricted-area intrusion"
+  },
+  "category": {
+    "dr": "حفاظت ساحوی",
+    "ps": "سیمه‌ییزه ساتنه",
+    "en": "Perimeter protection"
+  },
+  "difficulty": "easy",
+  "nominal_minutes": 8,
+  "description": {
+    "dr": "تشخیص ویدیویی و تأیید در مهلت.",
+    "ps": "ویډیويي پېژندنه او په ټاکلي وخت کې تایید.",
+    "en": "Video detection and ACK within the deadline."
+  },
+  "duration_ms": 45000,
+  "loop": false,
+  "metrics": {
+    "detection_s": 22,
+    "ack_s": 18,
+    "compliance_pct": 98,
+    "route_decision": {
+      "dr": "اعزام تیم براوو",
+      "ps": "د براوو ټیم لېږل",
+      "en": "Dispatch team Bravo"
+    }
+  },
+  "steps": [
+    {
+      "time_offset_ms": 5400,
+      "events": [
+        {
+          "message": {
+            "dr": "کمره CAM-03: حرکت در حاشیهٔ ساحه",
+            "ps": "CAM-03 کمره: د سیمې په څنډه کې خوځښت",
+            "en": "CAM-03: movement at the zone edge"
+          },
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 13500,
+      "events": [
+        {
+          "message": {
+            "dr": "ورود فرد به ساحهٔ ممنوعه · YOLOv8 ۹۲٪",
+            "ps": "منع شوې سیمې ته د یو کس ننوتل · YOLOv8 ۹۲٪",
+            "en": "Person entered the restricted zone · YOLOv8 92%"
+          },
+          "level": "critical"
+        }
+      ],
+      "incidents": [
+        {
+          "type": "intrusion",
+          "severity": "high",
+          "at": {
+            "restricted": true
+          },
+          "radius_m": 150,
+          "confidence": 0.92,
+          "evidence": [
+            "CAM-03",
+            "yolov8"
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "type": "intrusion",
+          "severity": "critical",
+          "message": {
+            "dr": "حرکت غیرمجاز در ساحهٔ ممنوعه",
+            "ps": "په منع شوې سیمه کې غیرمجاز خوځښت",
+            "en": "Unauthorised movement in the restricted zone"
+          }
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 22500,
+      "events": [
+        {
+          "message": {
+            "dr": "تأیید اپراتور در ۱۸ ثانیه",
+            "ps": "د اپرېټر تایید په ۱۸ ثانیو کې",
+            "en": "Operator ACK in 18 s"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 31500,
+      "positions": [
+        {
+          "source_id": "bravo",
+          "at": {
+            "restricted": true,
+            "east_m": -120
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 3
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "تیم براوو در محل",
+            "ps": "د براوو ټیم په ځای کې",
+            "en": "Team Bravo on scene"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
+          "level": "info"
+        }
+      ]
+    }
+  ]
+}

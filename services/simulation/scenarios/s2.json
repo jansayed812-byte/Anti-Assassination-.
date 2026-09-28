@@ -1,0 +1,161 @@
+{
+  "id": "s2",
+  "name": {
+    "dr": "اخلال و جعل GNSS",
+    "ps": "د GNSS ګډوډي او جعل",
+    "en": "GNSS jamming and spoofing"
+  },
+  "category": {
+    "dr": "جنگ الکترونیکی",
+    "ps": "برېښنايي جګړه",
+    "en": "Electronic warfare"
+  },
+  "difficulty": "medium",
+  "nominal_minutes": 10,
+  "description": {
+    "dr": "افت GNSS و ادامهٔ ردیابی با INS و Wi-Fi.",
+    "ps": "د GNSS کمزوري او د INS او Wi-Fi په مرسته د تعقیب دوام.",
+    "en": "GNSS degradation; tracking continues on INS and Wi-Fi."
+  },
+  "duration_ms": 45000,
+  "loop": false,
+  "metrics": {
+    "detection_s": 8,
+    "ack_s": 31,
+    "compliance_pct": 91,
+    "route_decision": {
+      "dr": "ادامه روی P با INS",
+      "ps": "په P لاره د INS سره دوام",
+      "en": "Continue on P using INS"
+    }
+  },
+  "steps": [
+    {
+      "time_offset_ms": 0,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "P",
+            "frac": 0.1
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 4500,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "P",
+            "frac": 0.18
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "افزایش HDOP به ۴٫۸ · احتمال اخلال",
+            "ps": "HDOP ۴٫۸ ته لوړ شو · د ګډوډۍ احتمال",
+            "en": "HDOP rose to 4.8 · possible jamming"
+          },
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 11250,
+      "events": [
+        {
+          "message": {
+            "dr": "جعل GNSS تشخیص شد · جهش ۸۰۰ متری رد شد",
+            "ps": "د GNSS جعل وپېژندل شو · ۸۰۰ متره ټوپ رد شو",
+            "en": "GNSS spoofing detected · 800 m jump rejected"
+          },
+          "level": "error"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "gnss_spoofing",
+          "severity": "high",
+          "message": {
+            "dr": "جعل GNSS تشخیص شد",
+            "ps": "د GNSS جعل وپېژندل شو",
+            "en": "GNSS spoofing detected"
+          }
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 18000,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "P",
+            "frac": 0.3
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "ردیابی با INS و Wi-Fi RTT · CEP95 ۹٫۸ متر",
+            "ps": "د INS او Wi-Fi RTT په مرسته تعقیب · CEP95 ۹٫۸ متره",
+            "en": "Tracking on INS + Wi-Fi RTT · CEP95 9.8 m"
+          },
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 31500,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "P",
+            "frac": 0.45
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "GNSS معتبر بازیابی شد · تلفیق کامل",
+            "ps": "معتبر GNSS بېرته راغی · بشپړ ترکیب",
+            "en": "Valid GNSS restored · full fusion"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
+          "level": "info"
+        }
+      ]
+    }
+  ]
+}

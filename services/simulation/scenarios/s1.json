@@ -1,0 +1,232 @@
+{
+  "id": "s1",
+  "name": {
+    "dr": "کمین در مسیر اصلی",
+    "ps": "په اصلي لاره کې کمین",
+    "en": "Ambush on the primary route"
+  },
+  "category": {
+    "dr": "تهدید مسیر",
+    "ps": "د لارې ګواښ",
+    "en": "Route threat"
+  },
+  "difficulty": "hard",
+  "nominal_minutes": 15,
+  "description": {
+    "dr": "تشخیص تهدید روی مسیر P، تبدیل به مسیر A و ارتقای اخطار.",
+    "ps": "په P لاره کې د ګواښ پېژندل، A لارې ته اوښتل او د خبرتیا لوړول.",
+    "en": "Detect a threat on route P, switch to route A and escalate the alert."
+  },
+  "duration_ms": 45000,
+  "loop": false,
+  "metrics": {
+    "detection_s": 72,
+    "ack_s": 24,
+    "compliance_pct": 94,
+    "route_decision": {
+      "dr": "درست · از P به A",
+      "ps": "سم · له P څخه A ته",
+      "en": "Correct · P → A"
+    }
+  },
+  "steps": [
+    {
+      "time_offset_ms": 0,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "P",
+            "frac": 0.1
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 3600,
+      "events": [
+        {
+          "message": {
+            "dr": "حرکت مشکوک در ۴۰۰ متری مسیر P",
+            "ps": "د P لارې په ۴۰۰ مترۍ کې شکمن خوځښت",
+            "en": "Suspicious movement 400 m from route P"
+          },
+          "level": "warning"
+        }
+      ],
+      "incidents": [
+        {
+          "type": "suspicious_movement",
+          "severity": "medium",
+          "at": {
+            "route": "P",
+            "frac": 0.45,
+            "side_m": 400
+          },
+          "radius_m": 400,
+          "confidence": 0.6,
+          "evidence": [
+            "drone_video"
+          ]
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 9900,
+      "events": [
+        {
+          "message": {
+            "dr": "YOLOv8: ۳ نفر مسلح · اطمینان ۸۹٪",
+            "ps": "YOLOv8: ۳ وسله وال کسان · باور ۸۹٪",
+            "en": "YOLOv8: 3 armed persons · confidence 89%"
+          },
+          "level": "error"
+        }
+      ],
+      "incidents": [
+        {
+          "type": "armed_persons",
+          "severity": "critical",
+          "at": {
+            "route": "P",
+            "frac": 0.5,
+            "side_m": 120
+          },
+          "radius_m": 250,
+          "confidence": 0.89,
+          "evidence": [
+            "yolov8",
+            "drone_video"
+          ]
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "P",
+            "frac": 0.25
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 15750,
+      "events": [
+        {
+          "message": {
+            "dr": "اخطار بحرانی به اپراتور ارسال شد",
+            "ps": "بحراني خبرتیا اپرېټر ته ولېږل شوه",
+            "en": "Critical alert sent to the operator"
+          },
+          "level": "critical"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "ambush",
+          "severity": "critical",
+          "message": {
+            "dr": "کمین احتمالی روی مسیر P",
+            "ps": "په P لاره کې احتمالي کمین",
+            "en": "Possible ambush on route P"
+          }
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 21600,
+      "events": [
+        {
+          "message": {
+            "dr": "تأیید اپراتور در ۲۴ ثانیه",
+            "ps": "د اپرېټر تایید په ۲۴ ثانیو کې",
+            "en": "Operator ACK in 24 s"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 27900,
+      "events": [
+        {
+          "message": {
+            "dr": "تبدیل مسیر از P به A",
+            "ps": "له P څخه A لارې ته اوښتل",
+            "en": "Route switched P → A"
+          },
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "A",
+            "frac": 0.35
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 36000,
+      "events": [
+        {
+          "message": {
+            "dr": "عبور امن از CP-3",
+            "ps": "له CP-3 څخه خوندي تېرېدل",
+            "en": "Passed CP-3 safely"
+          },
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "A",
+            "frac": 0.75
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
+          "level": "info"
+        }
+      ],
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "A",
+            "frac": 0.95
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ]
+    }
+  ]
+}

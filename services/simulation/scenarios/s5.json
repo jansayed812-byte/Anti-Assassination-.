@@ -1,0 +1,122 @@
+{
+  "id": "s5",
+  "name": {
+    "dr": "انتقال عاجل مجروح",
+    "ps": "د ټپي بېړنی لېږد",
+    "en": "Emergency medical evacuation"
+  },
+  "category": {
+    "dr": "طبی",
+    "ps": "طبي",
+    "en": "Medical"
+  },
+  "difficulty": "hard",
+  "nominal_minutes": 20,
+  "description": {
+    "dr": "مسیر E تا خانهٔ امن و هماهنگی با شفاخانه.",
+    "ps": "E لاره تر خوندي کوره او له روغتون سره همغږي.",
+    "en": "Route E to the safe house and coordination with the hospital."
+  },
+  "duration_ms": 45000,
+  "loop": false,
+  "metrics": {
+    "detection_s": 5,
+    "ack_s": 12,
+    "compliance_pct": 96,
+    "route_decision": {
+      "dr": "درست · مسیر E",
+      "ps": "سم · E لاره",
+      "en": "Correct · route E"
+    }
+  },
+  "steps": [
+    {
+      "time_offset_ms": 2700,
+      "events": [
+        {
+          "message": {
+            "dr": "راپور زخمی در کاروان آلفا",
+            "ps": "د الفا په کاروان کې د ټپي راپور",
+            "en": "Casualty reported in convoy Alpha"
+          },
+          "level": "error"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "medevac",
+          "severity": "high",
+          "message": {
+            "dr": "درخواست انتقال عاجل مجروح",
+            "ps": "د ټپي د بېړني لېږد غوښتنه",
+            "en": "Medical evacuation requested"
+          }
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 9000,
+      "events": [
+        {
+          "message": {
+            "dr": "فعال‌سازی مسیر E · هماهنگی با شفاخانه",
+            "ps": "د E لارې فعالول · له روغتون سره همغږي",
+            "en": "Route E activated · coordinating with the hospital"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 24750,
+      "positions": [
+        {
+          "source_id": "alpha",
+          "at": {
+            "route": "E",
+            "frac": 1
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 12
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "رسیدن به خانهٔ امن",
+            "ps": "خوندي کور ته رسېدل",
+            "en": "Arrived at the safe house"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 36000,
+      "events": [
+        {
+          "message": {
+            "dr": "تحویل به تیم طبی",
+            "ps": "طبي ټیم ته سپارل",
+            "en": "Handed over to the medical team"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
+          "level": "info"
+        }
+      ]
+    }
+  ]
+}

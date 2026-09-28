@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with PostGIS
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: ops-postgres
+    environment:
+      POSTGRES_USER: ops_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ops_secure_password}
+      POSTGRES_DB: ops_database
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./init-db/02-postgis.sql:/docker-entrypoint-initdb.d/02-postgis.sql
+      - ./init-db/03-schema.sql:/docker-entrypoint-initdb.d/03-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops_user -d ops_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ops-network
+    restart: unless-stopped
+
+  # TimescaleDB (time-series data)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: ops-timescaledb
+    environment:
+      POSTGRES_USER: ts_user
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:-ts_secure_password}
+      POSTGRES_DB: ts_database
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./init-db/04-timescale.sql:/docker-entrypoint-initdb.d/04-timescale.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ts_user -d ts_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ops-network
+    restart: unless-stopped
+
+  # NATS JetStream (message bus)
+  nats:
+    image: nats:latest
+    container_name: ops-nats
+    command: -js -c /etc/nats/nats.conf
+    ports:
+      - "4222:4222"
+      - "6222:6222"
+      - "8222:8222"
+    volumes:
+      - ./init-db/nats.conf:/etc/nats/nats.conf
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8222/varz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ops-network
+    restart: unless-stopped
+
+  # Redis (caching and short-term state)
+  redis:
+    image: redis:7-alpine
+    container_name: ops-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_password}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ops-network
+    restart: unless-stopped
+
+  # MinIO (object storage)
+  minio:
+    image: minio/minio:latest
+    container_name: ops-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-ops_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-ops_minio_password}
+    command: server /minio_data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/minio_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ops-network
+    restart: unless-stopped
+
+  # Operations console (dashboard + API/WebSocket backend). Set JWT_SECRET in .env.
+  console:
+    build: .
+    container_name: ops-console
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 8000
+      JWT_SECRET: ${JWT_SECRET:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      MAP_STYLE_URL: ${MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/liberty}
+      MAP_TERRAIN_URL: ${MAP_TERRAIN_URL:-https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png}
+      BRANCHES: ${BRANCHES:-MZR,KBL,HRT}
+    ports:
+      - "8000:8000"
+    networks:
+      - ops-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  timescaledb_data:
+  nats_data:
+  redis_data:
+  minio_data:
+
+networks:
+  ops-network:
+    driver: bridge

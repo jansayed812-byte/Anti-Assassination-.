@@ -1,0 +1,133 @@
+{
+  "id": "s3",
+  "name": {
+    "dr": "قطع کامل مخابره با تیم",
+    "ps": "له ټیم سره د اړیکې بشپړ پرې کېدل",
+    "en": "Complete loss of team comms"
+  },
+  "category": {
+    "dr": "مخابرات",
+    "ps": "مخابرات",
+    "en": "Communications"
+  },
+  "difficulty": "medium",
+  "nominal_minutes": 12,
+  "description": {
+    "dr": "آزمون بافر آفلاین و هماهنگ‌سازی پس از وصل مجدد.",
+    "ps": "د آفلاین بفر او له بیا نښلېدو وروسته د همغږۍ ازموینه.",
+    "en": "Test of the offline buffer and resync after reconnection."
+  },
+  "duration_ms": 45000,
+  "loop": false,
+  "metrics": {
+    "detection_s": 15,
+    "ack_s": 40,
+    "compliance_pct": 89,
+    "route_decision": {
+      "dr": "حفظ موقعیت",
+      "ps": "د موقعیت ساتل",
+      "en": "Hold position"
+    }
+  },
+  "steps": [
+    {
+      "time_offset_ms": 2250,
+      "positions": [
+        {
+          "source_id": "charlie",
+          "at": {
+            "unit": "charlie"
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 1
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "آخرین سگنال تیم چارلی",
+            "ps": "د چارلي ټیم وروستی سیګنال",
+            "en": "Last signal from team Charlie"
+          },
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 9000,
+      "events": [
+        {
+          "message": {
+            "dr": "قطع مخابره با تیم چارلی · بافر محلی فعال",
+            "ps": "له چارلي ټیم سره اړیکه پرې شوه · محلي بفر فعال",
+            "en": "Team Charlie comms lost · local buffer active"
+          },
+          "level": "error"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "comms_loss",
+          "severity": "high",
+          "message": {
+            "dr": "قطع مخابره با تیم چارلی",
+            "ps": "له چارلي ټیم سره اړیکه پرې شوه",
+            "en": "Team Charlie comms lost"
+          }
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 24750,
+      "events": [
+        {
+          "message": {
+            "dr": "اعزام درون D-01 به حیث رلهٔ مخابراتی",
+            "ps": "D-01 ډرون د مخابراتي ریلې په توګه ولېږل شو",
+            "en": "Drone D-01 dispatched as a comms relay"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 33750,
+      "positions": [
+        {
+          "source_id": "charlie",
+          "at": {
+            "unit": "charlie",
+            "east_m": 40
+          },
+          "accuracy_m": 3,
+          "confidence": 0.95,
+          "speed_mps": 1
+        }
+      ],
+      "events": [
+        {
+          "message": {
+            "dr": "وصل مجدد · ۱۲۴ بسته بدون تکرار هماهنگ شد",
+            "ps": "بیا نښلېدل · ۱۲۴ کڅوړې پرته له تکرار همغږې شوې",
+            "en": "Reconnected · 124 packets resynced without duplicates"
+          },
+          "level": "info"
+        }
+      ]
+    },
+    {
+      "time_offset_ms": 44550,
+      "events": [
+        {
+          "message": {
+            "dr": "پایان سناریو",
+            "ps": "د سناریو پای",
+            "en": "Scenario complete"
+          },
+          "level": "info"
+        }
+      ]
+    }
+  ]
+}

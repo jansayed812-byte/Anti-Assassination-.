@@ -1,0 +1,107 @@
+/*
+ * "Lapis Signal" design tokens — see docs/design/design-philosophy.md.
+ * Deep lapis grounds, a turquoise signal accent, and a risk scale that moves in both hue and lightness (monotonic
+ * from low to critical) so it survives colour-vision deficiencies. Dark is the operations default; light serves daylight and print.
+ * Contrast of every text/ground pair used by the UI is checked in tests/unit/theme-contrast.test.ts.
+ */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a101b;
+  --bg-2: #0d1522;
+  --surface: #121b2a;
+  --surface-2: #182336;
+  --surface-3: #1f2d44;
+  --line: rgba(160, 186, 228, 0.13);
+  --line-strong: rgba(160, 186, 228, 0.26);
+  --text: #e8edf5;
+  --text-2: #b3bfd2;
+  --text-3: #8a97ac;
+  --accent: #33c3b8;
+  --accent-strong: #62dbd1;
+  --accent-ink: #04201e;
+  --accent-soft: rgba(51, 195, 184, 0.14);
+  --accent-line: rgba(51, 195, 184, 0.55);
+  --friendly: #6aa8ff;
+  --success: #3dbb86;
+  --warning: #e8b64a;
+  --danger: #ef5a64;
+  --info: #6aa8ff;
+  --danger-soft: rgba(239, 90, 100, 0.16);
+  --warning-soft: rgba(232, 182, 74, 0.16);
+  --success-soft: rgba(61, 187, 134, 0.15);
+  --info-soft: rgba(106, 168, 255, 0.15);
+  --risk-low: #62d9b0;
+  --risk-medium: #d8a634;
+  --risk-high: #e9772f;
+  --risk-critical: #e03a5a;
+  --hazard: #f5d31c;
+  --hazard-ink: #1a1600;
+  --map-ground: #0c1320;
+  --overlay: rgba(4, 8, 15, 0.62);
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 0 0 1px var(--line), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 0 0 1px var(--line-strong), 0 18px 48px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f1eee6;
+  --bg-2: #ebe7dd;
+  --surface: #ffffff;
+  --surface-2: #f7f5f0;
+  --surface-3: #eeebe3;
+  --line: rgba(21, 34, 54, 0.12);
+  --line-strong: rgba(21, 34, 54, 0.24);
+  --text: #131d2e;
+  --text-2: #3b485e;
+  --text-3: #56637a;
+  --accent: #0a7a73;
+  --accent-strong: #06625c;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(10, 122, 115, 0.1);
+  --accent-line: rgba(10, 122, 115, 0.5);
+  --friendly: #1f5fcf;
+  --success: #17804f;
+  --warning: #8a5f00;
+  --danger: #c4283a;
+  --info: #1f5fcf;
+  --danger-soft: rgba(196, 40, 58, 0.1);
+  --warning-soft: rgba(176, 122, 0, 0.12);
+  --success-soft: rgba(23, 128, 79, 0.1);
+  --info-soft: rgba(31, 95, 207, 0.1);
+  --risk-low: #2f9e7c;
+  --risk-medium: #9e6d00;
+  --risk-high: #a6410a;
+  --risk-critical: #8c0e32;
+  --hazard: #f0c800;
+  --hazard-ink: #1a1600;
+  --map-ground: #e9e5da;
+  --overlay: rgba(19, 29, 46, 0.35);
+  --shadow-1: 0 1px 2px rgba(19, 29, 46, 0.08);
+  --shadow-2: 0 0 0 1px var(--line), 0 8px 24px rgba(19, 29, 46, 0.12);
+  --shadow-3: 0 0 0 1px var(--line-strong), 0 16px 40px rgba(19, 29, 46, 0.18);
+}
+
+:root {
+  --font: 'Inter', 'Noto Sans Arabic', system-ui, sans-serif;
+  --font-rtl: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --r-s: 6px;
+  --r-m: 10px;
+  --r-l: 14px;
+  --r-xl: 20px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --fs-xs: 11px;
+  --fs-s: 12.5px;
+  --fs-m: 13.5px;
+  --fs-l: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
