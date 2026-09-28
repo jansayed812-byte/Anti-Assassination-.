@@ -199,6 +199,14 @@ export default function MapView({ mode, compact }: { mode: Mode; compact: boolea
     styleReady.current = false;
     (window as unknown as { __opsMap?: MLMap }).__opsMap = map;
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 110 }), 'bottom-right');
+    // On narrow maps the attribution stays collapsed to its (i) button so it does not run under the legend.
+    // MapLibre re-opens it whenever attributions change (style swap, DEM arriving), so collapse after each
+    // change until the user opens it.
+    let attribTouched = false;
+    map.getContainer().querySelector('.maplibregl-ctrl-attrib-button')?.addEventListener('click', () => { attribTouched = true; });
+    const collapseAttrib = () => { if (!attribTouched && map.getContainer().clientWidth < 640) map.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'); };
+    map.on('styledata', collapseAttrib);
+    map.on('sourcedata', collapseAttrib);
     let loaded = false, tileOk = false, tileErrors = 0, demOk = false, demErrors = 0;
     // Style swaps are deferred: MapLibre raises errors from inside its render loop and must not re-enter it.
     let switching = false;

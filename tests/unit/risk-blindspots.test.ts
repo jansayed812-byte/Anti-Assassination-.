@@ -153,10 +153,10 @@ describe('BlindSpotService', () => {
     id, name: tri(id, id, id), type: 'relay', protocol: 'test', detail: { key: 'dev.detail.relay' } as never, state, battery_pct: null, firmware: '1', signal_dbm: null,
     last_seen: Date.now(), geo: p, coverage: { kind: 'radio', tx_dbm: tx, gain_db: 6 }, history: [],
   });
-  const setup = (devices: Device[], corridors: Array<{ plan: string; route: string; path: LatLon[] }> = []) => {
+  const setup = (devices: Device[], corridors: Array<{ plan: string; route: string; path: LatLon[] }> = [], now: () => number = Date.now) => {
     const risk = new RiskModel(geo);
     const graph = new RoadGraph(geo.roads);
-    const svc = new BlindSpotService(geo, risk, graph, () => devices, () => corridors, () => []);
+    const svc = new BlindSpotService(geo, risk, graph, () => devices, () => corridors, () => [], now);
     return { risk, svc };
   };
   const networkCells = (zones: BlindSpotZone[]) => new Set(zones.filter((z) => z.type === 'network').flatMap((z) => z.cells));
@@ -251,6 +251,39 @@ describe('BlindSpotService', () => {
       expect(after.map((z) => z.first_seen)).toEqual(before.map((z) => z.first_seen));
     }
     expect(new Set(before.map((z) => z.id)).size).toBe(before.length);
+  });
+
+  it('does not raise repeated alerts while a drone patrols back and forth', () => {
+    let clock = 1_000_000;
+    const drone = { ...relay('D-01', offset(MZR.center, -1500, 0)), type: 'drone', coverage: { kind: 'drone', footprint_m: 400 } } as Device;
+    const far = relay('R2', offset(MZR.center, 0, 4200), 'on', 30); // covers the north, beyond R1's reach
+    const devices = [relay('R1', MZR.center, 'on', 34), far, drone]; // R1 reaches ≈ 2.7 km
+    const corridor = { plan: 'ESC-9', route: 'P', path: [offset(MZR.center, -4000, 0), offset(MZR.center, 4000, 0)] };
+    const { svc } = setup(devices, [corridor], () => clock);
+    let alerts = 0;
+    svc.on('changed', (_z: BlindSpotZone[], f: BlindSpotZone[], g: BlindSpotGrowth[]) => { alerts += f.length + g.length; });
+    svc.recompute();
+    const stops = [-1500, 1500]; // the drone leaves one half of the corridor unwatched, then the other
+    for (let lap = 0; lap < 6; lap++) {
+      for (const east of stops) { clock += 10_000; drone.geo = offset(MZR.center, east, 0); svc.recompute(); }
+    }
+    // The first move exposes ground that was never blind (at most one alert per side); later laps are silent.
+    expect(alerts).toBeLessThanOrEqual(2);
+    const afterLaps = alerts;
+    for (const east of stops) { clock += 10_000; drone.geo = offset(MZR.center, east, 0); svc.recompute(); }
+    expect(alerts).toBe(afterLaps);
+    // A relay failure over fresh ground still alerts, and so does the same ground once the 15-minute memory lapses.
+    const beforeOutage = alerts;
+    far.state = 'off';
+    clock += 10_000; svc.recompute();
+    expect(alerts).toBeGreaterThan(beforeOutage);
+    far.state = 'on'; clock += 10_000; svc.recompute();
+    const beforeRepeat = alerts;
+    far.state = 'off'; clock += 10_000; svc.recompute();
+    expect(alerts).toBe(beforeRepeat); // flapping within 15 minutes: the relay's own offline alert covers it
+    far.state = 'on'; clock += 16 * 60_000; svc.recompute();
+    far.state = 'off'; clock += 10_000; svc.recompute();
+    expect(alerts).toBeGreaterThan(beforeRepeat);
   });
 
   it('marks restricted areas as limited access', () => {

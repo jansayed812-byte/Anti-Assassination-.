@@ -34,6 +34,8 @@ const ACCESS_ROAD_M = 250;
 const PROTECTED_RADIUS_M = 400;
 /** An existing zone that gains at least this many newly blind cells (≈ 0.5 km²) is reported as grown. */
 const GROWTH_MIN_CELLS = 5;
+/** Cells blind within this window are not "new" again (drone patrols, flapping links). */
+const RECENT_MS = 15 * 60_000;
 
 /** A zone that already existed but grew (e.g. a relay went offline next to an existing gap). */
 export interface BlindSpotGrowth { zone: BlindSpotZone; added_cells: number; added_km2: number }
@@ -46,10 +48,13 @@ export class BlindSpotService extends EventEmitter {
   private roadDist = new Map<string, number>();
   /** Bumped whenever the set of zones changes (route analyses cache on it). */
   revision = 0;
+  /** Last time each cell was blind, per type (see RECENT_MS). */
+  private recentBlind: Record<BlindType, Map<string, number>> = { network: new Map(), monitoring: new Map(), access: new Map() };
 
   constructor(
     private geo: BranchGeo, private risk: RiskModel, private graph: RoadGraph,
     private devices: () => Device[], private corridors: () => Corridor[], private protectedSites: () => LatLon[],
+    private now: () => number = Date.now,
   ) {
     super();
     for (const id of risk.cellIds()) this.roadDist.set(id, graph.nearest(risk.cellCenter(id)!).distM);
@@ -119,17 +124,21 @@ export class BlindSpotService extends EventEmitter {
     zones.sort((a, b) => b.avg_risk - a.avg_risk || b.cell_count - a.cell_count);
 
     const previous = this.zonesCache;
-    const fresh = this.revision > 0 ? zones.filter((z) => !previous.some((p) => p.type === z.type && overlap(p.cells, z.cells) >= 0.3)) : [];
+    // New / grown zones are judged against every cell that was blind in the last 15 minutes, not just the last
+    // pass: a patrolling drone uncovers and re-covers the same ground constantly and must not raise alerts.
+    const now = this.now();
+    const known = (type: BlindType, c: string) => { const t = this.recentBlind[type].get(c); return t !== undefined && now - t <= RECENT_MS; };
+    const fresh: BlindSpotZone[] = [];
     const grown: BlindSpotGrowth[] = [];
     if (this.revision > 0) {
-      const before: Record<BlindType, Set<string>> = { network: new Set(), monitoring: new Set(), access: new Set() };
-      for (const p of previous) for (const c of p.cells) before[p.type].add(c);
       for (const z of zones) {
-        if (fresh.includes(z)) continue;
-        const added = z.cells.filter((c) => !before[z.type].has(c));
-        if (added.length >= GROWTH_MIN_CELLS) grown.push({ zone: z, added_cells: added.length, added_km2: areaKm2(added) });
+        const added = z.cells.filter((c) => !known(z.type, c));
+        if (added.length / z.cells.length > 0.7) fresh.push(z);
+        else if (added.length >= GROWTH_MIN_CELLS) grown.push({ zone: z, added_cells: added.length, added_km2: areaKm2(added) });
       }
     }
+    for (const z of zones) for (const c of z.cells) this.recentBlind[z.type].set(c, now);
+    for (const m of Object.values(this.recentBlind)) if (m.size > 20_000) for (const [c, t] of m) if (now - t > RECENT_MS) m.delete(c);
     const sig = (zs: BlindSpotZone[]) => zs.map((z) => `${z.id}:${z.cell_count}`).join(',');
     if (this.revision === 0 || sig(previous) !== sig(zones)) this.revision++;
     for (const z of zones) if (!this.firstSeen.has(z.id)) this.firstSeen.set(z.id, z.first_seen);
@@ -230,9 +239,4 @@ export function watches(d: Device, p: LatLon): boolean {
 
 function nearest(pois: Poi[], p: LatLon): { p: Poi; d: number } | null {
   return pois.reduce<{ p: Poi; d: number } | null>((best, x) => { const d = distanceM(p, x); return !best || d < best.d ? { p: x, d } : best; }, null);
-}
-
-function overlap(a: string[], b: string[]): number {
-  const s = new Set(a);
-  return b.filter((c) => s.has(c)).length / Math.max(1, b.length);
 }

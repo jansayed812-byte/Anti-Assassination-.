@@ -71,6 +71,23 @@ test.describe('map', () => {
     expect(text).toMatch(/[\d۰-۹]+[.٫][\d۰-۹]{6},\s*[\d۰-۹]+[.٫][\d۰-۹]{6}/);
   });
 
+  test.describe('on a phone', () => {
+    test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    test('legend and attribution do not overlap', async ({ page }) => {
+      await login(page, 'farida', '/live');
+      await mapReady(page);
+      // A source that arrives later with its own attribution (as the terrain DEM does online) must not re-open it.
+      await page.evaluate(() => (window as unknown as { __opsMap: { addSource(id: string, s: object): void } }).__opsMap
+        .addSource('e2e-attrib', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, attribution: 'E2E attribution source' }));
+      await page.waitForTimeout(800);
+      const legend = (await page.locator('[data-testid=legend]').boundingBox())!;
+      for (const sel of ['.maplibregl-ctrl-attrib', '.maplibregl-ctrl-scale']) {
+        const b = await page.locator(sel).boundingBox();
+        if (b) expect(overlaps(legend, b), sel).toBe(false);
+      }
+    });
+  });
+
   for (const lang of ['dr', 'en'] as const) {
     test(`legend, status and attribution do not overlap (${lang})`, async ({ page, request }) => {
       await setServerPrefs(request, 'reza', { lang });
